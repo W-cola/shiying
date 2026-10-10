@@ -1,0 +1,26 @@
+{
+  "version": "1.5.1",
+  "apk": {
+    "apk": "拾影-安卓版-v1.5.1.apk",
+    "bytes": 210082,
+    "sha256": "c8573393a2bd16733e26d57ff675b6f476d05f9c26503629f650f0f8b87a7dc9",
+    "package": "cn.shiying.mobile",
+    "version": "1.5.1",
+    "version_code": 9,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "signing": "release, v2/v3 verified"
+  },
+  "native_album_checks": 66,
+  "record_group_checks": 16,
+  "preview_swipe_checks": 12,
+  "preview_update_checks": 7,
+  "real_image_share": "https://v.kuaishou.com/njS1JbGL",
+  "images": 10,
+  "image_bytes": 3925536,
+  "legacy_batches_recognized": 7,
+  "user_screenshot_collection": "9 pictures grouped in one row, local left swipe verified at 2 / 9",
+  "original_parser_player_theme_and_icon_files_preserved": 15,
+  "preview": "http://127.0.0.1:8787/",
+  "scope": "Dedicated Android 15 emulator, original signing certificate, no physical phone connected; deleted only newly created test batches"
+}

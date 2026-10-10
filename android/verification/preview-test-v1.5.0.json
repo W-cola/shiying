@@ -1,0 +1,6 @@
+{
+  "version": "1.5.0",
+  "checks": 21,
+  "result": "passed",
+  "scope": "Loopback-only bridge, real isolated Android 15 APK; share, resolution, internal play, pause, rotation and viewport layout; no physical phone"
+}

@@ -1,0 +1,24 @@
+{
+  "version": "1.4.2",
+  "date": "2026-10-08",
+  "source": "https://weixin.qq.com/sph/A3loS34sJs",
+  "resolver": "https://v.mtotech.com/api/resolve",
+  "user_login_required": false,
+  "uploads": [
+    "user-submitted share URL"
+  ],
+  "does_not_request": [
+    "WeChat cookies",
+    "Yuanbao cookies",
+    "chat data",
+    "device identifiers"
+  ],
+  "media_transfer": "DownloadManager directly from Tencent media URL",
+  "user_flow": "Paste -> Parse -> Save -> Gallery",
+  "parser_checks": 126,
+  "native_download": "passed",
+  "gallery": "passed",
+  "full_decode": "passed",
+  "user_phone_tested": false,
+  "dependency": "Third-party public endpoint availability; no uptime guarantee"
+}

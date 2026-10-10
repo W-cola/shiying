@@ -1,0 +1,14 @@
+{
+  "version": "1.7.0",
+  "result": "passed",
+  "checks": 7,
+  "rebuild_install": "passed",
+  "previous_downloads": "preserved",
+  "completed_collections": "16 个",
+  "gallery_videos": 10,
+  "verified_code_hashes": {
+    "classes.dex": "204ded7007d88fd7fcae28a2cb46e2ff9df591fd65e912072b1df134b570e1f5",
+    "resources.arsc": "4d6ec5b9661b6bd2ce2888516965bb0e3909bbd1cb5728bd3dbdd74f70262ac6"
+  },
+  "scope": "Real preview browser build button; signed APK compiled and installed on isolated emulator, no physical phone"
+}

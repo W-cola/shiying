@@ -1,0 +1,31 @@
+{
+  "version": "1.4.1",
+  "source": "https://v.kuaishou.com/KyQPissP",
+  "id": "3xvcug35jptf39e",
+  "apk_sha256": "d94b1b3a997038b5ce120033274f6e8adb2413ed0d3060c8057f175429491da1",
+  "bytes": 1089496,
+  "sha256": "44b98ced049b4327d0b3b7d7fe0c90ece9160abee0fd2ef9ea729b526cf8f02c",
+  "probe": {
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 720,
+        "height": 1280,
+        "duration": "9.633333"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "duration": "9.635011"
+      }
+    ],
+    "format": {
+      "duration": "9.635011",
+      "size": "1089496"
+    }
+  },
+  "full_audio_video_decode": "passed",
+  "gallery": "Movies/拾影; is_pending=0",
+  "scope": "fresh user-provided video downloaded by the APK on isolated Android 15"
+}

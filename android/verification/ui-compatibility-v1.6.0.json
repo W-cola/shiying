@@ -1,0 +1,43 @@
+{
+  "version": "1.6.0",
+  "baseline": "1.5.1",
+  "changed": [
+    "app/src/main/java/cn/shiying/mobile/PlayerActivity.java"
+  ],
+  "unchanged_files": [
+    "app/src/main/java/cn/shiying/mobile/AlbumRecords.java",
+    "app/src/main/java/cn/shiying/mobile/CompoundDownloads.java",
+    "app/src/main/java/cn/shiying/mobile/core/Albums.java",
+    "app/src/main/java/cn/shiying/mobile/core/Bilibili.java",
+    "app/src/main/java/cn/shiying/mobile/core/ChannelsCodec.java",
+    "app/src/main/java/cn/shiying/mobile/core/ChannelsService.java",
+    "app/src/main/java/cn/shiying/mobile/core/MediaHeaders.java",
+    "app/src/main/java/cn/shiying/mobile/core/Platforms.java",
+    "app/src/main/java/cn/shiying/mobile/core/SocialMedia.java",
+    "app/src/main/java/cn/shiying/mobile/core/VideoInfo.java",
+    "app/src/main/java/cn/shiying/mobile/core/VideoResolver.java",
+    "app/src/main/java/cn/shiying/mobile/core/Xiaohongshu.java",
+    "app/src/main/java/cn/shiying/mobile/DownloadCompleteReceiver.java",
+    "app/src/main/java/cn/shiying/mobile/DownloadCoordinator.java",
+    "app/src/main/java/cn/shiying/mobile/ImageActivity.java",
+    "app/src/main/java/cn/shiying/mobile/MainActivity.java",
+    "app/src/main/java/cn/shiying/mobile/MediaAssembler.java",
+    "app/src/main/java/cn/shiying/mobile/MediaAssemblyJob.java",
+    "app/src/main/java/cn/shiying/mobile/MediaPublisher.java",
+    "app/src/main/java/cn/shiying/mobile/PlayerSource.java",
+    "app/src/main/java/cn/shiying/mobile/RecordDeletion.java",
+    "app/src/main/java/cn/shiying/mobile/RecordStore.java",
+    "app/src/main/java/cn/shiying/mobile/Ui.java",
+    "app/src/main/assets/browser_capture.js",
+    "app/src/main/assets/browser_read.js",
+    "app/src/main/res/drawable/icon_background.xml",
+    "app/src/main/res/drawable/icon_foreground.xml",
+    "app/src/main/res/drawable/icon_monochrome.xml",
+    "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml",
+    "app/src/main/res/values/colors.xml",
+    "app/src/main/res/values/styles.xml"
+  ],
+  "compiled_resources": "identical",
+  "scope": "Parsing, media preparation, image preview/grouping, gallery save/delete, home/library UI and icons preserved; player implementation upgraded"
+}

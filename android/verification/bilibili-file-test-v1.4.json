@@ -1,0 +1,27 @@
+{
+  "version": "1.4.0",
+  "scope": "fresh Bilibili MP4 assembled by final APK on isolated Android 15",
+  "apk_sha256": "11ea9e7ddbe8c76e384be72197fb0d6173bb1d72779c1feded2a8d4bf58c2c20",
+  "sha256": "c565ebef8135a744b05ec18cf2c5931b82d1c9ba2b5d6ac112f1b263283489ab",
+  "probe": {
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 852,
+        "height": 480,
+        "duration": "212.200300"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "duration": "212.309167"
+      }
+    ],
+    "format": {
+      "duration": "212.309167",
+      "size": "26309419"
+    }
+  },
+  "full_audio_video_decode": "passed"
+}

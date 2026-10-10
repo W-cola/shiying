@@ -1,0 +1,35 @@
+{
+  "version": "1.4.2",
+  "source": "https://weixin.qq.com/sph/A3loS34sJs",
+  "author": "中国超模",
+  "title": "朦胧薄纱蕾丝，冷艳气质惊艳整个秀场",
+  "user_login_required": false,
+  "resolution_reads_user_cookies": false,
+  "service": "https://v.mtotech.com/api/resolve",
+  "apk_sha256": "ae179ebf5a69763078e91b0cdb9a39e048c35c48f705f32f14f8cec16db00439",
+  "bytes": 730352,
+  "sha256": "db8cb5fb9ee0ff8c5379a21006d6ec8a6f20c2b0b0643082b4a8c3248373f3d1",
+  "probe": {
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 720,
+        "height": 1280,
+        "duration": "7.583333"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "duration": "7.639002"
+      }
+    ],
+    "format": {
+      "duration": "7.639002",
+      "size": "730352"
+    }
+  },
+  "full_audio_video_decode": "passed",
+  "gallery": "Movies/拾影; is_pending=0",
+  "scope": "actual file from final APK on isolated Android 15; third-party anonymous API; not tested on user Xiaomi 15"
+}

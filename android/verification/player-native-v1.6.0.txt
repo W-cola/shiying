@@ -1,0 +1,6 @@
+INSTRUMENTATION_RESULT: cases=[{"platform":"已下载 B站视频","width":853,"height":480,"duration_ms":212309,"audio":true},{"platform":"抖音","width":720,"height":1280,"duration_ms":30324,"audio":true},{"platform":"快手","width":720,"height":1280,"duration_ms":9750,"audio":true},{"platform":"视频号","width":720,"height":1280,"duration_ms":7640,"audio":true},{"platform":"B站 DASH","width":853,"height":480,"duration_ms":212309,"audio":true},{"platform":"小红书 HEVC","width":720,"height":960,"duration_ms":5167,"audio":true}]
+INSTRUMENTATION_RESULT: checks=58
+INSTRUMENTATION_RESULT: library_sample=【官方 MV】Never Gonna Give You Up - Rick Astley [BV1GJ411x7h7] 20261008_092535_768.mp4 
+INSTRUMENTATION_RESULT: result=PASS: real in-app online/local playback, picture+sound, pause, seek, landscape, lifecycle and no preview gallery/history records
+INSTRUMENTATION_RESULT: scope=Isolated Android 15 emulator; actual supplied Douyin/Kuaishou/WeChat links and public Bili DASH; no user phone connected
+INSTRUMENTATION_CODE: -1

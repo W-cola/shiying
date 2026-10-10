@@ -1,0 +1,30 @@
+{
+  "device": "isolated Android 15 emulator",
+  "package": "cn.shiying.mobile",
+  "version": "1.1.0",
+  "source_note_id": "6a7bf28a0000000026036ba2",
+  "title": "是厕所王来了",
+  "author": "育育",
+  "share_intent": "passed",
+  "background_download": "passed",
+  "bytes": 334392,
+  "sha256": "b53879843b4c525eabb511b80399bca67c0f59d24935d266cfa0d5ae9fff71c5",
+  "probe": {
+    "streams": [
+      {
+        "codec_name": "hevc",
+        "codec_type": "video",
+        "width": 720,
+        "height": 960
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio"
+      }
+    ],
+    "format": {
+      "duration": "5.133333",
+      "size": "334392"
+    }
+  }
+}

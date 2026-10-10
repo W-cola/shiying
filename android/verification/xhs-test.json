@@ -1,0 +1,19 @@
+{
+  "checks": 30,
+  "links": [
+    {
+      "formats": 2,
+      "kind": "video",
+      "mime": "video/mp4",
+      "id": "6a7bf28a0000000026036ba2",
+      "state": "resolved",
+      "title": "是厕所王来了"
+    },
+    {
+      "target_preserved": true,
+      "id": "6aa0a4830000000026039149",
+      "state": "browser_login_or_verification_required",
+      "source_token_preserved": true
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- A frame and a folded bookmark keep the silhouette legible at launcher size. -->
+    <path android:fillColor="#14352F" android:fillAlpha="0.48" android:pathData="M39,37 L72,33 Q77,32 78,38 L81,69 Q82,75 76,76 L43,80 Q38,81 37,75 L34,44 Q33,38 39,37 Z" />
+    <path android:pathData="M37,32 L69,28 Q74,27 75,33 L79,65 Q80,71 74,72 L42,76 Q36,77 35,71 L31,39 Q30,33 37,32 Z">
+        <aapt:attr name="android:fillColor"><gradient android:startX="34" android:startY="31" android:endX="77" android:endY="76" android:startColor="#A6C7A8" android:endColor="#5C947A" android:type="linear" /></aapt:attr>
+    </path>
+    <path android:fillColor="#12372F" android:fillAlpha="0.24" android:pathData="M37,36 L66,36 Q73,36 73,43 L73,79 Q73,81 71,80 L55,72 L39,80 Q37,81 37,79 Z" />
+    <path android:pathData="M34,36 Q34,30 41,30 L65,30 Q72,30 72,37 L72,77 Q72,80 69,78 L53,70 L37,78 Q34,80 34,77 Z">
+        <aapt:attr name="android:fillColor"><gradient android:startX="36" android:startY="30" android:endX="71" android:endY="79" android:startColor="#FFFDF0" android:endColor="#E7EFDA" android:type="linear" /></aapt:attr>
+    </path>
+    <path android:fillColor="#1E5947" android:pathData="M47,43 Q47,41 49,42 L61,49 Q63,50 61,52 L49,59 Q47,60 47,58 Z" />
+    <path android:fillColor="#C4D7BE" android:pathData="M43,64 L63,64 Q64,64 64,65 Q64,66 63,66 L43,66 Q42,66 42,65 Q42,64 43,64 Z" />
+    <path android:fillColor="#E6F2AF" android:pathData="M75,25 Q76,25 76,28 L76,30 L78,30 Q81,30 81,31 Q81,32 78,32 L76,32 L76,34 Q76,37 75,37 Q74,37 74,34 L74,32 L72,32 Q69,32 69,31 Q69,30 72,30 L74,30 L74,28 Q74,25 75,25 Z" />
+</vector>

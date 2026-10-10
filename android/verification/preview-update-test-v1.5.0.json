@@ -1,0 +1,13 @@
+{
+  "version": "1.5.0",
+  "result": "passed",
+  "checks": 7,
+  "rebuild_install": "passed",
+  "previous_downloads": "preserved",
+  "gallery_videos": 10,
+  "verified_code_hashes": {
+    "classes.dex": "51b95758b82214e957b5f59616cf31d310bb0ff1bd4bc9a6bc082c8a640da5a7",
+    "resources.arsc": "298c44f7662136b21c9980d96496ef3b8cabc28fd7b60d27c06ec514a545fff2"
+  },
+  "scope": "Real preview browser build button; signed APK compiled and installed on isolated emulator, no physical phone"
+}

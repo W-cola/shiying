@@ -1,0 +1,17 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'cn.shiying.mobile'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'cn.shiying.mobile'
+        minSdk 26
+        targetSdk 35
+        versionCode 11
+        versionName '1.7.0'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildTypes { release { minifyEnabled false } }
+}

@@ -1,0 +1,11 @@
+{
+  "apk": "拾影-安卓版-v1.7.0.apk",
+  "bytes": 271661,
+  "sha256": "2d3f145cd6dadb0bfa407f32030e747ffdfe266b614be77414e6ea920c48ae4f",
+  "package": "cn.shiying.mobile",
+  "version": "1.7.0",
+  "version_code": 11,
+  "min_sdk": 26,
+  "target_sdk": 35,
+  "signing": "release, v2/v3 verified"
+}

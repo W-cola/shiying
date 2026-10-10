@@ -1,0 +1,3 @@
+INSTRUMENTATION_RESULT: fixture=synthetic note with official Google WebP sample images; distinct from the user's real notes
+INSTRUMENTATION_RESULT: result=PASS: existing app save flow downloaded two images, exported UTF8 caption and persisted all new records while retaining old history
+INSTRUMENTATION_CODE: -1

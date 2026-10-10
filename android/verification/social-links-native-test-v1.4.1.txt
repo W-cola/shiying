@@ -1,0 +1,11 @@
+INSTRUMENTATION_RESULT: image_bytes=3925536
+INSTRUMENTATION_RESULT: image_count=10
+INSTRUMENTATION_RESULT: images=PASS: user link, all 10 original images, 10 public gallery rows and full caption
+INSTRUMENTATION_RESULT: result=PASS for Kuaishou video and 10-image download; WeChat share webpage restricted
+INSTRUMENTATION_RESULT: scope=real supplied links on isolated Android 15; Kuaishou saved; WeChat preview-only, not a successful WeChat download
+INSTRUMENTATION_RESULT: video=PASS: user link, actual download, video/audio tracks and public gallery
+INSTRUMENTATION_RESULT: video_file=/storage/emulated/0/Movies/拾影/岳父点外卖被女婿接单！心里一惊：这外卖员咋能自己开锁呢 [3xvcug35jptf39e] 20261008_104105_644.mp4
+INSTRUMENTATION_RESULT: video_height=1280
+INSTRUMENTATION_RESULT: video_width=720
+INSTRUMENTATION_RESULT: wechat=LIMITED: user link resolves and preview is identified; site supplies cover/description only, no video URL. Native browser explains restriction.
+INSTRUMENTATION_CODE: -1

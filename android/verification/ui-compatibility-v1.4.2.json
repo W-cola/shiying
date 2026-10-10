@@ -1,0 +1,41 @@
+{
+  "version": "1.4.2",
+  "baseline": "1.4.1",
+  "ui_files": [
+    {
+      "file": "app/src/main/java/cn/shiying/mobile/Ui.java",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/drawable/icon_background.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/drawable/icon_foreground.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/drawable/icon_monochrome.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/values/colors.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/values/styles.xml",
+      "unchanged": true
+    }
+  ],
+  "resources_arsc_unchanged": true,
+  "previous_release_preserved": true,
+  "help_copy": "Updated to disclose link-only third-party parsing for sph videos"
+}

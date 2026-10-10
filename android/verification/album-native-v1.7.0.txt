@@ -1,0 +1,7 @@
+INSTRUMENTATION_RESULT: bytes=3925536
+INSTRUMENTATION_RESULT: checks=66
+INSTRUMENTATION_RESULT: images=10
+INSTRUMENTATION_RESULT: legacy_collections=7
+INSTRUMENTATION_RESULT: result=PASS: legacy groups, real ten-image remote/local swipe gallery, one visible download collection, all gallery photos, caption and whole-batch deletion with other records preserved
+INSTRUMENTATION_RESULT: scope=Isolated Android 15 emulator; user's actual Kuaishou image share; deletion only of a newly created test batch
+INSTRUMENTATION_CODE: -1

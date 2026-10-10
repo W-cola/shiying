@@ -1,0 +1,6 @@
+{
+  "version": "1.4.1",
+  "checks": 31,
+  "result": "passed",
+  "scope": "offline routed browser fixtures; not a live-platform success claim"
+}

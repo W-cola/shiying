@@ -1,0 +1,13 @@
+INSTRUMENTATION_RESULT: audio=true
+INSTRUMENTATION_RESULT: author=中国超模
+INSTRUMENTATION_RESULT: bytes=730352
+INSTRUMENTATION_RESULT: duration_us=7583333
+INSTRUMENTATION_RESULT: file=/storage/emulated/0/Movies/拾影/朦胧薄纱蕾丝，冷艳气质惊艳整个秀场 [A3loS34sJs] 20261008_112855_221.mp4
+INSTRUMENTATION_RESULT: height=1280
+INSTRUMENTATION_RESULT: id=A3loS34sJs
+INSTRUMENTATION_RESULT: result=PASS: supplied WeChat link resolved without user login or cookie access, actual MP4 downloaded through app, published in public gallery
+INSTRUMENTATION_RESULT: scope=Isolated Android 15 emulator; third-party anonymous API; user's phone and private app data not accessed
+INSTRUMENTATION_RESULT: source=https://weixin.qq.com/sph/A3loS34sJs
+INSTRUMENTATION_RESULT: title=朦胧薄纱蕾丝，冷艳气质惊艳整个秀场
+INSTRUMENTATION_RESULT: width=720
+INSTRUMENTATION_CODE: -1

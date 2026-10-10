@@ -1,0 +1,63 @@
+{
+  "version": "1.4.1",
+  "date": "2026-10-08",
+  "apk_sha256": "d94b1b3a997038b5ce120033274f6e8adb2413ed0d3060c8057f175429491da1",
+  "device": "isolated Android 15 emulator; user Xiaomi phone not connected",
+  "provided_links": [
+    {
+      "source": "https://v.kuaishou.com/KyQPissP",
+      "platform": "快手",
+      "id": "3xvcug35jptf39e",
+      "kind": "video",
+      "status": "downloaded_and_published",
+      "width": 720,
+      "height": 1280,
+      "bytes": 1089496,
+      "audio": true,
+      "full_decode": "passed",
+      "album": "Movies/拾影"
+    },
+    {
+      "source": "https://v.kuaishou.com/njS1JbGL",
+      "platform": "快手",
+      "id": "3xv5358vvb8eq9k",
+      "kind": "images",
+      "status": "all_images_and_caption_saved",
+      "author": "Sky治愈风景",
+      "images": 10,
+      "gallery_rows": 10,
+      "image_bytes": 3925536,
+      "original_width": 1080,
+      "album": "Pictures/拾影"
+    },
+    {
+      "source": "https://weixin.qq.com/sph/AwuKEvusQH",
+      "platform": "视频号",
+      "kind": "video_share_preview",
+      "status": "preview_only_not_downloaded",
+      "title": "朦胧薄纱蕾丝，冷艳气质惊艳整个秀场",
+      "author": "中国超模",
+      "observations": [
+        "short link expanded normally",
+        "desktop and mobile webpage API returned cover and description only",
+        "no video element or public playback URL",
+        "native app explicitly explains missing media"
+      ],
+      "app_behavior": "no cover-as-video fallback; stop repeated automatic read after explanatory message"
+    }
+  ],
+  "changes": [
+    "Kuaishou target aliases bound by published share_info and shareObjectId",
+    "Kuaishou parent album data, CDN host arrays, size metadata and alternate CDN support",
+    "WeChat sph short links and preview page IDs recognized",
+    "Target-bound preview media DTO reading and preview-only message",
+    "Additional early WebView capture hook",
+    "Markdown-escaped URL separator normalization"
+  ],
+  "checks": {
+    "parser": 117,
+    "browser_offline": 31,
+    "native_provided_links": "2 successful downloads; 1 identified webpage restriction",
+    "ui_style_and_icon": "unchanged"
+  }
+}

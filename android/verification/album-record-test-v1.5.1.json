@@ -1,0 +1,6 @@
+{
+  "version": "1.5.1",
+  "checks": 16,
+  "result": "passed",
+  "scope": "actual pure-Java group projection, legacy filenames, caption inclusion, picture order, separate batches and untouched underlying file rows"
+}

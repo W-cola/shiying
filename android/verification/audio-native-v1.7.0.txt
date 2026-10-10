@@ -1,0 +1,5 @@
+INSTRUMENTATION_RESULT: cases=[{"source":"用户抖音手机分享","duration_us":30325260,"bytes":495085},{"source":"B站独立声音流","duration_us":212309166,"bytes":5404105},{"source":"已有本地视频","duration_us":212309166,"bytes":5404105}]
+INSTRUMENTATION_RESULT: checks=42
+INSTRUMENTATION_RESULT: result=PASS: real audio-only M4A, native AAC preservation/PCM conversion, background completion, Bili sound-only source, internal play/pause/speed, music publication, deletion and cancel tombstones
+INSTRUMENTATION_RESULT: scope=Dedicated Android 15 emulator; supplied Douyin link, real Bili audio and existing local video, controlled PCM/silent cases; no physical phone
+INSTRUMENTATION_CODE: -1

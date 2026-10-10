@@ -1,0 +1,10 @@
+INSTRUMENTATION_RESULT: bytes=26309419
+INSTRUMENTATION_RESULT: file=/storage/emulated/0/Movies/拾影/【官方 MV】Never Gonna Give You Up - Rick Astley [BV1GJ411x7h7] 20261008_092535_768.mp4
+INSTRUMENTATION_RESULT: height=480
+INSTRUMENTATION_RESULT: id=BV1GJ411x7h7
+INSTRUMENTATION_RESULT: result=PASS: live Bilibili source resolved, separate video/audio downloaded by Android, natively muxed into MP4 with both tracks, published in gallery
+INSTRUMENTATION_RESULT: scope=real public Bilibili example on isolated Android 15 emulator; no third-party parsing service
+INSTRUMENTATION_RESULT: source=https://www.bilibili.com/video/BV1GJ411x7h7
+INSTRUMENTATION_RESULT: title=【官方 MV】Never Gonna Give You Up - Rick Astley
+INSTRUMENTATION_RESULT: width=852
+INSTRUMENTATION_CODE: -1

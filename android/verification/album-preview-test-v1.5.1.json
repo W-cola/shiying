@@ -1,0 +1,6 @@
+{
+  "version": "1.5.1",
+  "checks": 12,
+  "result": "passed",
+  "scope": "Real native grouped library and supplied Kuaishou album in browser preview; horizontal drag in both directions, ten-picture counter, no external viewer"
+}

@@ -1,0 +1,5 @@
+INSTRUMENTATION_RESULT: checks=60
+INSTRUMENTATION_RESULT: icon_preview=/sdcard/Pictures/ShiYing-QA/shiying-icon-v1.3.png
+INSTRUMENTATION_RESULT: result=PASS: clear UI, parse cancellation, delete cancellation, actual MP4/file/gallery deletion, caption deletion, pending-transfer cancellation, neighboring records and stale-save protection
+INSTRUMENTATION_RESULT: scope=isolated emulator and app-owned test files only
+INSTRUMENTATION_CODE: -1

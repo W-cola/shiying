@@ -1,0 +1,23 @@
+{
+  "version": "1.5.0",
+  "apk": {
+    "apk": "拾影-安卓版-v1.5.0.apk",
+    "bytes": 193698,
+    "sha256": "f15f71c22068ddd856c5e508cc22e8b01f21d5f2086becc67c41021f3bb853e4",
+    "package": "cn.shiying.mobile",
+    "version": "1.5.0",
+    "version_code": 8,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "signing": "release, v2/v3 verified"
+  },
+  "native_player_checks": 58,
+  "preview_checks": 21,
+  "preview_rebuild_checks": 7,
+  "parser_fixture_checks": 122,
+  "preview": "http://127.0.0.1:8787/",
+  "phone_connected": false,
+  "playback": "native in-app online/local with picture and audio",
+  "gallery": "Existing save/delete flow retained; preview does not add gallery/history records",
+  "signing_certificate_sha256": "3079a4e704a1e951d4995e61c6de27151b9fc52898ac8d08bba4b6e2a08d6cbc"
+}

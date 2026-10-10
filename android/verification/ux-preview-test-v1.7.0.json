@@ -1,0 +1,6 @@
+{
+  "version": "1.7.0",
+  "checks": 35,
+  "result": "passed",
+  "scope": "Real native sheets, search/filter/recreation, 130% font, audio extract/play/pause/delete through local browser; only a test audio created and deleted"
+}

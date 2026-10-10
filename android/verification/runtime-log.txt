@@ -1,0 +1,29 @@
+--------- beginning of main
+E/chromium( 1059): [1008/140704.034661:ERROR:ssl_client_socket_impl.cc(878)] handshake failed; returned -1, SSL error code 1, net_error -100
+E/chromium( 1450): [1008/154556.210500:ERROR:variations_seed_loader.cc(37)] Seed missing signature.
+--------- beginning of crash
+E/AndroidRuntime(21259): FATAL EXCEPTION: main
+E/AndroidRuntime(21259): Process: cn.shiying.mobile, PID: 21259
+E/AndroidRuntime(21259): java.lang.RuntimeException: Unable to start activity ComponentInfo{cn.shiying.mobile/cn.shiying.mobile.PlayerActivity}: java.lang.NullPointerException: Attempt to invoke virtual method 'android.view.WindowInsetsController com.android.internal.policy.DecorView.getWindowInsetsController()' on a null object reference
+E/AndroidRuntime(21259): 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:4048)
+E/AndroidRuntime(21259): 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:4235)
+E/AndroidRuntime(21259): 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:112)
+E/AndroidRuntime(21259): 	at android.app.servertransaction.TransactionExecutor.executeNonLifecycleItem(TransactionExecutor.java:174)
+E/AndroidRuntime(21259): 	at android.app.servertransaction.TransactionExecutor.executeTransactionItems(TransactionExecutor.java:109)
+E/AndroidRuntime(21259): 	at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:81)
+E/AndroidRuntime(21259): 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2636)
+E/AndroidRuntime(21259): 	at android.os.Handler.dispatchMessage(Handler.java:107)
+E/AndroidRuntime(21259): 	at android.os.Looper.loopOnce(Looper.java:232)
+E/AndroidRuntime(21259): 	at android.os.Looper.loop(Looper.java:317)
+E/AndroidRuntime(21259): 	at android.app.ActivityThread.main(ActivityThread.java:8705)
+E/AndroidRuntime(21259): 	at java.lang.reflect.Method.invoke(Native Method)
+E/AndroidRuntime(21259): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+E/AndroidRuntime(21259): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:886)
+E/AndroidRuntime(21259): Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'android.view.WindowInsetsController com.android.internal.policy.DecorView.getWindowInsetsController()' on a null object reference
+E/AndroidRuntime(21259): 	at com.android.internal.policy.PhoneWindow.getInsetsController(PhoneWindow.java:4092)
+E/AndroidRuntime(21259): 	at cn.shiying.mobile.PlayerActivity.onCreate(PlayerActivity.java:87)
+E/AndroidRuntime(21259): 	at android.app.Activity.performCreate(Activity.java:9002)
+E/AndroidRuntime(21259): 	at android.app.Activity.performCreate(Activity.java:8980)
+E/AndroidRuntime(21259): 	at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1526)
+E/AndroidRuntime(21259): 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:4030)
+E/AndroidRuntime(21259): 	... 13 more

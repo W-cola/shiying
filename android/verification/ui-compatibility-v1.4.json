@@ -1,0 +1,40 @@
+{
+  "version": "1.4.0",
+  "baseline": "1.3.0",
+  "ui_and_icon_resources": [
+    {
+      "file": "app/src/main/java/cn/shiying/mobile/Ui.java",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/drawable/icon_background.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/drawable/icon_foreground.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/drawable/icon_monochrome.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/values/colors.xml",
+      "unchanged": true
+    },
+    {
+      "file": "app/src/main/res/values/styles.xml",
+      "unchanged": true
+    }
+  ],
+  "resources_arsc_unchanged": true,
+  "scope": "Views/Canvas styling and icon unchanged; only help/hints/save paths and download logic updated"
+}

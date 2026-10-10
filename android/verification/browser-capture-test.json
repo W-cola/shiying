@@ -1,0 +1,10 @@
+{
+  "version": "1.2.0",
+  "fixture": "local simulated page, no live platform verification bypass",
+  "javascript_syntax": "passed",
+  "fetch_response_copy": "passed",
+  "xhr_response_copy": "passed",
+  "unrelated_endpoint_rejection": "passed",
+  "original_response_preserved": "passed",
+  "live_browser_note": "The actual target page showed a CAPTCHA in the emulator; it remained in browser assistance, without treating its loading animation as the requested video."
+}

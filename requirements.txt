@@ -1,0 +1,4 @@
+PySide6-Essentials>=6.8,<7
+playwright>=1.51,<2
+requests>=2.32,<3
+yt-dlp>=2026.8.19

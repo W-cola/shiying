@@ -1,0 +1,4 @@
+INSTRUMENTATION_RESULT: bytes=26309419
+INSTRUMENTATION_RESULT: fixture=controlled local sample using an already tested MP4; not a live WeChat share link
+INSTRUMENTATION_RESULT: result=PASS: known client-format sample converted on Android, original MP4 SHA-256 restored exactly, published to gallery
+INSTRUMENTATION_CODE: -1

@@ -1,0 +1,12 @@
+{
+  "version": "1.5.0",
+  "baseline": "1.4.2",
+  "unchanged_resources": {
+    "app/src/main/java/cn/shiying/mobile/Ui.java": "8e4a5a2351bbf4e07e2ecbcd45e5aebc2dc6e8656ac710b4a51b51ee9ddc6e60",
+    "app/src/main/res/values/styles.xml": "c22ae141903ddcc8cf42a3f8a6d7274830a5596bfda1e96c89d05c7745427988",
+    "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml": "6209f466e8799f962ee962474b5c698c5fe02f596a7b4ae97445be5c93c1e98f",
+    "app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml": "ed7aeeb4b8d15390ef99bb043a8213140eee8dd975d2d5a9dda69ab91e47c365"
+  },
+  "compiled_resources": "identical",
+  "new_ui": "In-app video play button and private dark-green player; existing home/library/icon preserved"
+}

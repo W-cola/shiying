@@ -1,0 +1,9 @@
+{
+  "version": "1.5.0",
+  "core_checks": 26,
+  "xiaohongshu_checks": 29,
+  "platform_checks": 67,
+  "total": 122,
+  "live_links_included": false,
+  "result": "passed"
+}

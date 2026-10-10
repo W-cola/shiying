@@ -1,0 +1,65 @@
+{
+  "version": "1.4.0",
+  "date": "2026-10-08",
+  "apk_sha256": "11ea9e7ddbe8c76e384be72197fb0d6173bb1d72779c1feded2a8d4bf58c2c20",
+  "download_locations": {
+    "video": "Movies/拾影",
+    "images": "Pictures/拾影",
+    "caption": "Download/拾影"
+  },
+  "platforms": [
+    {
+      "name": "抖音",
+      "video": true,
+      "images": true,
+      "live_video_evidence": "prior supplied desktop/mobile links; parser regression passed",
+      "images_evidence": "parser fixtures plus shared gallery save pipeline"
+    },
+    {
+      "name": "小红书",
+      "video": true,
+      "images": true,
+      "live_video_evidence": "prior supplied video link",
+      "images_evidence": "controlled note and official image sample pipeline; supplied live image note required login/verification"
+    },
+    {
+      "name": "B站",
+      "video": true,
+      "images": true,
+      "live_video_evidence": "fresh BV1GJ411x7h7 DASH download, native mux, public gallery and full decode",
+      "images_evidence": "dynamic and article parser fixtures",
+      "selected_part": true
+    },
+    {
+      "name": "快手",
+      "video_adapter": true,
+      "images_adapter": true,
+      "live_download_verified": false,
+      "evidence": "Kuaishou published DTO/Apollo/atlas and mobile domain fixtures; public example returned page framework"
+    },
+    {
+      "name": "视频号",
+      "video_adapter": true,
+      "images_adapter": true,
+      "live_download_verified": false,
+      "evidence": "target fixtures and known client-format controlled MP4 conversion with SHA256 equality on Android",
+      "requires": "accessible share webpage and playback data; in-app card/QR without URL unsupported"
+    }
+  ],
+  "checks": {
+    "parser": 106,
+    "browser_offline": 28,
+    "native_bilibili": "passed",
+    "gallery_images": "passed (controlled sample)",
+    "channels_format": "passed (controlled sample)",
+    "clear_and_delete": "passed",
+    "ui_and_icon_preserved": "passed"
+  },
+  "limits": [
+    "no DRM or paywall bypass",
+    "no login/captcha bypass",
+    "no live streams or bulk profiles",
+    "no general HLS downloader"
+  ],
+  "device_scope": "isolated Android 15 emulator; no user Xiaomi 15 connected"
+}

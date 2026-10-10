@@ -1,0 +1,5 @@
+INSTRUMENTATION_RESULT: checks=76
+INSTRUMENTATION_RESULT: portrait_source_id=A3loS34sJs
+INSTRUMENTATION_RESULT: result=PASS: actual vertical/horizontal videos, immersive bars and all buttons hidden, correct auto direction, independent rotation, position preservation, overlay/timer/back, speed/pause, seeks/gestures, window brightness, mute and real loop
+INSTRUMENTATION_RESULT: scope=Dedicated Android 15 emulator; existing real downloaded Bili and supplied portrait social video; no new downloads or physical phone access
+INSTRUMENTATION_CODE: -1

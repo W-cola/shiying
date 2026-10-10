@@ -1,0 +1,31 @@
+{
+  "version": "1.2.0",
+  "device": "isolated Android 15 emulator",
+  "source_video_id": "7693747185347940454",
+  "source_share": "https://v.douyin.com/xP--46iFdBs/",
+  "whole_mobile_share": "passed",
+  "download": "passed",
+  "system_video_library": "passed",
+  "directory": "Movies/拾影",
+  "bytes": 5247595,
+  "sha256": "2298c196a6de1d82c376d3f0c47deb6de9842799d7aa7da1d69fa78a8f6d2214",
+  "media_store": "Row: 0 _id=1000000030, _display_name=#发布会 [7693747185347940454] 20261008_002856_406.mp4, mime_type=video/mp4, relative_path=Movies/拾影/, is_pending=0, width=720, height=1280, duration=30324",
+  "probe": {
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 720,
+        "height": 1280
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio"
+      }
+    ],
+    "format": {
+      "duration": "30.323810",
+      "size": "5247595"
+    }
+  }
+}

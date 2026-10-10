@@ -1,0 +1,32 @@
+{
+  "device": "isolated Android 15 emulator",
+  "package": "cn.shiying.mobile",
+  "install": "passed",
+  "launch": "passed",
+  "share_intent": "passed",
+  "source_video_id": "7693840282563565674",
+  "background_download": "passed",
+  "bytes": 10749131,
+  "sha256": "908b8e9702039fd0dba99ae70dfe117ced5d1c2b0669eee4d7cc126a7d08952e",
+  "matches_desktop_video": true,
+  "probe": {
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 854,
+        "height": 480
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio"
+      }
+    ],
+    "format": {
+      "duration": "86.748005",
+      "size": "10749131"
+    }
+  },
+  "playback": "passed: Google Photos player started, MediaPlayer state 5, H.264/AAC tracks active",
+  "tested_apk_sha256": "9d6c3d8a62676267607f691e768e18fc7232323d939fa0ac102a1c09f41365f4"
+}

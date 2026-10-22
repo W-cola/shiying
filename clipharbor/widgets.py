@@ -2,7 +2,27 @@
 from PySide6.QtCore import Qt, QSize, QRectF, QEvent, QPoint, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (QComboBox, QListView, QFrame, QStyledItemDelegate, QStyle,
-    QVBoxLayout, QGraphicsDropShadowEffect)
+    QVBoxLayout, QGraphicsDropShadowEffect, QPlainTextEdit)
+
+
+class ShareInput(QPlainTextEdit):
+    submitted = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.composing = False
+
+    def inputMethodEvent(self, event):
+        self.composing = bool(event.preeditString())
+        super().inputMethodEvent(event)
+
+    def keyPressEvent(self, event):
+        if (not self.composing and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+                and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            self.submitted.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 class PickerDelegate(QStyledItemDelegate):

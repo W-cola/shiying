@@ -19,10 +19,13 @@ icon_dir = root / "assets"
 icon_dir.mkdir(exist_ok=True)
 export_icons(icon_dir)
 icon = icon_dir / "app.ico"
-subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--windowed",
+clean_flags = ["--clean"] if "--clean" in sys.argv[1:] else []
+subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", *clean_flags, "--windowed",
                 "--onedir", "--distpath", str(root / "build" / "desktop-dist"),
                 "--name", "ShiYing", "--icon", str(icon), "--collect-all", "playwright",
                 "--version-file", str(icon_dir / "windows-version.txt"),
+                "--add-data", str(root / "clipharbor" / "browser_read.js") + ";clipharbor",
+                "--add-data", str(root / "clipharbor" / "browser_capture.js") + ";clipharbor",
                 "--collect-all", "imageio_ffmpeg",
                 "--collect-all", "yt_dlp", "--exclude-module", "PySide6.QtWebEngineCore",
                 "--exclude-module", "PySide6.QtWebEngineWidgets", "--exclude-module", "pytest",

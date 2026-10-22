@@ -14,6 +14,7 @@ import requests
 from .douyin import DESKTOP_UA, MOBILE_UA, check_cancel, make_session, script_payloads, video_from_payload, walk
 from .links import douyin_id, is_douyin, stable_id
 from .models import AppError, ImageAsset, VideoFormat, VideoInfo
+from .watermark import marked_metadata, marked_url
 
 
 def host(url, domain):
@@ -84,19 +85,20 @@ def number(value):
 
 def image_asset(item):
     if isinstance(item, str):
-        return ImageAsset(media_url(item)) if media_url(item) else None
-    if not isinstance(item, dict):
+        return ImageAsset(media_url(item)) if media_url(item) and not marked_url(item) else None
+    if not isinstance(item, dict) or marked_metadata(item):
         return None
     variants = item.get("infoList") or []
     preferred = next((x.get("url") for x in variants if x.get("imageScene") == "WB_DFT" and x.get("url")), "")
     urls = item.get("url_list") or item.get("urlList") or []
     cdns = item.get("cdnUrls") or []
-    url = media_url(preferred or first(item, "urlDefault", "url", "urlPre", "src", "imageUrl", "picUrl") or
-                    (urls[0] if urls else "") or (cdns[0].get("url", "") if cdns and isinstance(cdns[0], dict) else ""))
-    if not url:
+    candidates = [preferred, first(item, "originalUrl", "originUrl"), first(item, "urlDefault", "url", "urlPre", "src", "imageUrl", "picUrl"),
+                  *urls, *(x.get("url", "") for x in cdns if isinstance(x, dict)),
+                  *(x.get("url", "") for x in variants if isinstance(x, dict)), *(item.get("alternatives") or [])]
+    candidates = list(dict.fromkeys(u for x in candidates if (u := media_url(x)) and not marked_url(u)))
+    if not candidates:
         return None
-    alternatives = list(dict.fromkeys(media_url(x) for x in [*urls[1:], *(item.get("alternatives") or [])] if media_url(x)))
-    return ImageAsset(url, number(item.get("width") or item.get("w")), number(item.get("height") or item.get("h")), alternatives)
+    return ImageAsset(candidates[0], number(item.get("width") or item.get("w")), number(item.get("height") or item.get("h")), candidates[1:])
 
 
 def album(info, items):
@@ -128,14 +130,17 @@ def base(node, target, source, page):
 
 def add_format(info, url, item=None, alternatives=None):
     item = item or {}
-    url = media_url(url)
-    if not url or any(f.url == url for f in info.formats) or item.get("drm") or item.get("hasDrm") or item.get("has_drm"):
+    candidates = list(dict.fromkeys(u for x in [url, *(alternatives or [])] if (u := media_url(x)) and not marked_url(u)))
+    if not candidates or marked_metadata(item):
+        return
+    url = candidates[0]
+    if any(f.url == url for f in info.formats) or item.get("drm") or item.get("hasDrm") or item.get("has_drm"):
         return
     width, height = number(item.get("width")), number(item.get("height"))
     fmt = VideoFormat(str(len(info.formats)), f"{width} × {height}" if width and height else "公开播放画质", url,
                       height=height, width=width, size=number(item.get("size")),
                       headers={"User-Agent": DESKTOP_UA, "Referer": info.page_url},
-                      alternatives=[u for x in (alternatives or []) if (u := media_url(x))])
+                      alternatives=candidates[1:])
     info.formats.append(fmt)
 
 
@@ -145,7 +150,17 @@ def douyin_album(node, target, source, page):
     images = node.get("images") or (node.get("image_post_info") or {}).get("images")
     if not images:
         return None
-    return album(info, [(x.get("display_image") or x.get("owner_watermark_image") or x) if isinstance(x, dict) else x for x in images])
+    selected = []
+    for item in images:
+        if isinstance(item, dict):
+            variants = [item.get("origin_image"), item.get("original_image"), item, item.get("display_image")]
+            clean = next((asset for variant in variants if (asset := image_asset(variant))), None)
+            if clean is None:
+                return None
+            selected.append({"url": clean.url, "width": clean.width, "height": clean.height, "alternatives": clean.alternatives})
+        else:
+            selected.append(item)
+    return album(info, selected)
 
 
 def xhs_note(node, target, source, page):
@@ -212,7 +227,7 @@ def kuaishou_note(node, target, source, page):
                      if isinstance(x, str) and not x.startswith(("http:", "https:", "//")) and cdns else x for x in items]
     if atlas or node.get("photoType") in (2, "ATLAS", "IMAGE") or node.get("type") in ("image", "atlas"):
         return album(info, items)
-    for key in ("playUrl", "videoUrl", "downloadUrl", "url", "photoUrl", "photoH265Url"):
+    for key in ("playUrl", "videoUrl", "url", "photoUrl", "photoH265Url"):
         add_format(info, node.get(key), node)
     for item in node.get("mainMvUrls") or []:
         add_format(info, item.get("url"), node)

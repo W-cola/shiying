@@ -1,0 +1,44 @@
+{
+  "version": "desktop-v1.8.0",
+  "automated_tests": 44,
+  "android_modified": false,
+  "android_readers_identical": true,
+  "baseline_resolve_seconds": 23.89,
+  "final_live_check": {
+    "resolve_seconds": 10.736,
+    "formats": 10,
+    "first_frame_seconds": 11.148,
+    "initial_state": "first frame paused; click to play",
+    "save_enabled": true,
+    "extra_windows": 0,
+    "history_added": 0,
+    "playback": "decoded and advanced"
+  },
+  "watermark_policy": [
+    "no share-download rendition fallback",
+    "no owner_watermark_image fallback",
+    "reject explicit watermarks in metadata/URL, backups, compound assets and redirects"
+  ],
+  "pixel_watermark_detection": false,
+  "open_claude_ui_reference": "02d021fceaf2a907f9e63a8125621bdda1b85d60",
+  "native_windows_review": {
+    "installed_exe": "v1.8.0",
+    "full_share_text_and_ctrl_enter": "passed",
+    "resolve_seconds_visible_in_status": 5.1,
+    "inline_first_frame": "passed; paused; no separate player window",
+    "source_dimensions": "1080x1920",
+    "duration_seconds": 11,
+    "watermark_visual_review": "no platform logo/username overlay in sampled preview frames",
+    "resolve_seconds_samples": [
+      5.1,
+      5.4,
+      5.5
+    ],
+    "fullscreen_picture_visible": "passed",
+    "escape_restores_inline_player": "passed",
+    "settings_rounded_card_background": "passed",
+    "single_click_play": "passed",
+    "keyboard_focus_and_F": "passed"
+  },
+  "portable_user_state_preserved": true
+}

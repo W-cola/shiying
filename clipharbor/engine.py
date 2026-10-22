@@ -12,6 +12,7 @@ import yt_dlp
 from .douyin import DouyinResolver, check_cancel, make_session, DESKTOP_UA
 from .links import available_path, douyin_id, extract_links, is_douyin, safe_filename, stable_id
 from .models import AppError, Cancelled, VideoFormat, VideoInfo
+from .watermark import marked_metadata, marked_url, require_clean
 
 
 def safe_message(message) -> str:
@@ -42,6 +43,22 @@ class Engine:
         self.cancel = cancel or Event()
 
     def resolve(self, text: str, interactive=False) -> VideoInfo:
+        info = self._resolve(text, interactive)
+        if info is None:
+            raise AppError("没有找到可用的无水印内容，已停止解析。")
+        clean = []
+        for fmt in info.formats:
+            try:
+                require_clean(info, fmt)
+                clean.append(fmt)
+            except AppError:
+                continue
+        if not clean:
+            raise AppError("没有可用的无水印媒体源，已停止解析，不会保存带水印版本。")
+        info.formats = clean
+        return info
+
+    def _resolve(self, text: str, interactive=False) -> VideoInfo:
         links = extract_links(text)
         if len(links) != 1:
             raise AppError("请一次解析一个视频链接，下载完成后再添加下一个。")
@@ -111,6 +128,9 @@ class Engine:
         check_cancel(self.cancel)
         if not raw or raw.get("_type") in ("playlist", "multi_video") or raw.get("is_live"):
             raise AppError("请提供单个录播视频的链接；暂不支持合集、直播或图集。")
+        raw["formats"] = [f for f in raw.get("formats", []) if not marked_metadata(f) and not marked_url(f.get("url") or "")]
+        if marked_metadata(raw) or marked_url(raw.get("url") or ""):
+            raise AppError("来源只提供带水印的版本，已停止解析。")
         formats = []
         # Offer only complete AV files; never silently download video without audio.
         for f in reversed(raw.get("formats") or [raw]):
@@ -131,6 +151,7 @@ class Engine:
                          "抖音" if is_douyin(source) else raw.get("extractor_key") or "网页视频", "yt-dlp", formats, raw)
 
     def download(self, info: VideoInfo, fmt: VideoFormat, folder: Path) -> Path:
+        require_clean(info, fmt)
         check_cancel(self.cancel)
         if info.kind == "images":
             from .media import save_album
@@ -185,6 +206,8 @@ class Engine:
                     metadata.unlink(missing_ok=True)
                     raise requests.RequestException("服务器拒绝旧的续传位置，下一次将重新下载。")
                 response.raise_for_status()
+                if marked_url(response.url):
+                    raise AppError("媒体跳转到了带水印版本，已停止保存。")
                 mime = response.headers.get("Content-Type", "").lower()
                 if any(t in mime for t in ("text/html", "application/json", "text/plain")):
                     raise AppError("服务器返回了网页或错误信息，未将其保存为视频。请重新解析。")

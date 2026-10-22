@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('E:/codex/视频获取（爬虫）/clipharbor/browser_read.js', 'clipharbor'), ('E:/codex/视频获取（爬虫）/clipharbor/browser_capture.js', 'clipharbor')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('playwright')

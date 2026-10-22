@@ -77,3 +77,13 @@ def human_duration(seconds: float) -> str:
     minutes, seconds = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
+
+
+def format_label(fmt):
+    """Use human readable quality names instead of platform codec/gear IDs."""
+    if fmt.width and fmt.height:
+        edge = min(fmt.width, fmt.height)
+        name = "4K" if edge >= 2160 else "2K" if edge >= 1440 else f"{edge}P"
+        dimensions = f"{fmt.width} × {fmt.height}"
+        return " · ".join([name, dimensions] + ([human_size(fmt.size)] if fmt.size else []))
+    return fmt.label + (" · " + human_size(fmt.size) if fmt.size else "")

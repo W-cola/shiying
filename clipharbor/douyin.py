@@ -14,9 +14,11 @@ import requests
 
 from .links import douyin_id, is_douyin, stable_id
 from .models import AppError, Cancelled, VideoFormat, VideoInfo
+from .watermark import marked_metadata, marked_url
 
-DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"
+DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 MOBILE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1"
+ANDROID_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
 
 
 def make_session(state_path: Path | None = None) -> requests.Session:
@@ -103,7 +105,9 @@ def video_from_payload(payload, target_id: str, source_url: str, page_url: str) 
         seen = set()
 
         def add(addr, label, owner=None):
-            urls = _urls(addr)
+            if marked_metadata(addr):
+                return
+            urls = [u for u in _urls(addr) if not marked_url(u)]
             if not urls or urls[0] in seen:
                 return
             owner = owner or video
@@ -123,14 +127,13 @@ def video_from_payload(payload, target_id: str, source_url: str, page_url: str) 
             add(entry.get("play_addr") or entry.get("playAddr") or entry.get("PlayAddr") or {},
                 entry.get("gear_name") or entry.get("gearName") or "播放画质", entry)
         for key, label in (("play_addr_h264", "兼容画质"), ("play_addr", "播放画质"),
-                           ("playAddr", "播放画质"), ("play_addr_bytevc1", "HEVC 画质"),
-                           ("download_addr", "分享页下载画质")):
+                           ("playAddr", "播放画质"), ("play_addr_bytevc1", "HEVC 画质")):
             add(video.get(key) or {}, label)
         if not formats:
             continue
         formats.sort(key=lambda f: (f.height, f.size), reverse=True)
         cover = video.get("origin_cover") or video.get("cover") or {}
-        covers = _urls(cover)
+        covers = [url for url in _urls(cover) if not marked_url(url)]
         author = node.get("author") or {}
         return VideoInfo(source_url, page_url, node_id, node.get("desc") or node.get("description") or f"抖音视频 {node_id}",
                          author.get("nickname", ""), _number(video.get("duration")) / 1000,
@@ -151,7 +154,7 @@ class DouyinResolver:
     def resolve_share(self, source: str) -> tuple[str, str, VideoInfo | None]:
         self.log("正在展开分享链接…")
         with make_session(self.state) as session:
-            response = session.get(source, timeout=(12, 18), headers={"User-Agent": MOBILE_UA})
+            response = session.get(source, timeout=(6, 8), headers={"User-Agent": ANDROID_UA})
             response.raise_for_status()
             check_cancel(self.cancel)
             if not is_douyin(response.url):
@@ -166,7 +169,7 @@ class DouyinResolver:
                     return canonical, target, info
             # Read the ordinary mobile share page, which may expose server-rendered metadata.
             try:
-                mobile = session.get(f"https://www.iesdouyin.com/share/video/{target}/", timeout=(10, 15),
+                mobile = session.get(f"https://www.iesdouyin.com/share/video/{target}/", timeout=(5, 6),
                                      headers={"User-Agent": MOBILE_UA})
                 if mobile.ok:
                     for payload in script_payloads(mobile.text):
@@ -183,20 +186,40 @@ class DouyinResolver:
         self.log("打开独立浏览器，请在页面中播放目标视频；如需验证或登录，请手动完成。" if interactive else "分享页没有直接提供视频，正在用浏览器读取播放器…")
         with sync_playwright() as p:
             context = None
+            browser = None
             failures = []
             for channel in ("msedge", "chrome", None):
                 try:
-                    context = p.chromium.launch_persistent_context(
-                        str(self.data_dir / "browser-profile"), channel=channel,
-                        headless=not interactive, viewport={"width": 1280, "height": 840},
-                        locale="zh-CN", accept_downloads=False)
+                    if interactive:
+                        context = p.chromium.launch_persistent_context(
+                            str(self.data_dir / "browser-profile"), channel=channel,
+                            headless=False, viewport={"width": 1280, "height": 840},
+                            user_agent=DESKTOP_UA, locale="zh-CN", accept_downloads=False)
+                    else:
+                        browser = p.chromium.launch(channel=channel, headless=True)
+                        options = {"storage_state": str(self.state)} if self.state.exists() else {}
+                        context = browser.new_context(viewport={"width": 1280, "height": 840},
+                            user_agent=DESKTOP_UA, locale="zh-CN", accept_downloads=False, **options)
                     break
                 except BrowserError as error:
+                    if browser:
+                        browser.close()
+                        browser = None
                     failures.append(str(error))
             if not context:
                 raise AppError("无法启动浏览器。请安装 Microsoft Edge 或 Chrome；开发者也可以运行 playwright install chromium。")
             candidate = [None]
+            if not interactive:
+                # Metadata comes from the page's scripts/JSON. Loading thumbnails,
+                # fonts and full media delayed DOMContentLoaded by tens of seconds.
+                context.route("**/*", lambda route: route.abort() if route.request.resource_type in
+                              ("image", "font", "media") else route.continue_())
             page = context.pages[0] if context.pages else context.new_page()
+            # Use the same target-bound state/visible-player reader as Android.
+            # React player props can be ready well before global state or a late
+            # network detail response becomes available.
+            page.add_init_script(Path(__file__).with_name("browser_capture.js").read_text(encoding="utf-8"))
+            read_player = Path(__file__).with_name("browser_read.js").read_text(encoding="utf-8")
             observed_id = [target or douyin_id(canonical) or douyin_id(source)]
 
             def on_response(response):
@@ -212,14 +235,18 @@ class DouyinResolver:
                 except Exception:
                     pass
 
-            page.on("response", on_response)
+            # Inspect complete bodies; don't block the browser's response event
+            # while a large or slow JSON body is still arriving.
+            page.on("requestfinished", lambda request: on_response(request.response()))
             try:
                 try:
-                    page.goto(canonical or source, wait_until="domcontentloaded", timeout=30000)
+                    page.goto(canonical or source, wait_until="domcontentloaded" if interactive else "commit",
+                              timeout=30000 if interactive else 12000)
+                    self.log("已打开内容页，正在读取无水印播放源…")
                 except BrowserError:
                     if page.is_closed():
                         raise AppError("浏览器已关闭，未完成解析。")
-                deadline = time.monotonic() + (180 if interactive else 24)
+                deadline = time.monotonic() + (180 if interactive else 18)
                 while time.monotonic() < deadline:
                     check_cancel(self.cancel)
                     if page.is_closed():
@@ -233,8 +260,15 @@ class DouyinResolver:
                     # Only use the player on the requested video's own page.
                     if current_id and current_id == observed_id[0]:
                         try:
-                            payloads = page.evaluate("() => [window._ROUTER_DATA, window.__INITIAL_STATE__].filter(Boolean)")
-                            payloads.extend(script_payloads(page.content()))
+                            snapshot = json.loads(page.evaluate(read_player))
+                            payloads = []
+                            for value in snapshot.get("payloads", []):
+                                for text in (value, unquote(value)):
+                                    try:
+                                        payloads.append(json.loads(text))
+                                        break
+                                    except ValueError:
+                                        continue
                             for payload in payloads:
                                 info = video_from_payload(payload, observed_id[0], source, page.url)
                                 if info:
@@ -251,11 +285,13 @@ class DouyinResolver:
                             # can be a loading animation or recommendation. Never return it.
                         except BrowserError:
                             pass
-                    page.wait_for_timeout(600)
+                    page.wait_for_timeout(200)
                 self._save_state(context)
-                raise AppError("没有读到目标内容的完整媒体。请点击「浏览器辅助解析」，完成登录或验证后再读取。直播和受保护内容不支持保存。")
+                raise AppError("未读到目标内容可用的无水印媒体。请使用辅助解析完成登录或验证后重试；不会退回带水印下载版。")
             finally:
                 context.close()
+                if browser:
+                    browser.close()
 
     def _save_state(self, context):
         temp = self.state.with_suffix(".tmp")

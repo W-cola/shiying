@@ -7,6 +7,9 @@ from pathlib import Path
 
 
 def main():
+    if sys.platform == "win32":
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("cn.shiying.desktop")
     # pythonw/PyInstaller --windowed sets these to None. Network subprocesses
     # and third-party libraries may still expect writable standard streams.
     for name in ("stdout", "stderr"):

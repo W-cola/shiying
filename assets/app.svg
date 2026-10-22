@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="tile" x1="34" y1="16" x2="221" y2="253" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B8865"/><stop offset=".56" stop-color="#205D48"/><stop offset="1" stop-color="#123E34"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="83" y1="55" x2="167" y2="204" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF0"/><stop offset="1" stop-color="#E9EED9"/>
+    </linearGradient>
+    <linearGradient id="back" x1="108" y1="51" x2="194" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B1CDA9"/><stop offset="1" stop-color="#6C9A7F"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="57" fill="url(#tile)"/>
+  <rect x="9" y="9" width="238" height="238" rx="56" fill="none" stroke="#FFFFFF" stroke-opacity=".15" stroke-width="2"/>
+  <path d="M99 52 177 65Q190 67 188 80L172 194Q171 201 164 197L121 170 83 183Q76 186 77 178L89 64Q90 51 99 52Z" fill="#0C342B" opacity=".27" transform="translate(4 7)"/>
+  <path d="M102 49 181 62Q192 64 190 77L173 192Q172 199 165 195L123 167 86 180Q79 183 80 175L92 61Q93 48 102 49Z" fill="url(#back)"/>
+  <path d="M80 57H159Q174 57 174 72V201Q174 207 168 204L121 179 75 204Q69 207 69 201V72Q69 57 80 57Z" fill="#10382E" opacity=".2" transform="translate(0 5)"/>
+  <path d="M80 52H159Q174 52 174 67V196Q174 202 168 199L121 174 75 199Q69 202 69 196V67Q69 52 80 52Z" fill="url(#paper)"/>
+  <path d="M110 86Q106 84 106 89V133Q106 138 110 135L145 114Q149 111 145 108Z" fill="#215F49"/>
+  <path d="M98 153H145" fill="none" stroke="#B9CFB3" stroke-width="6" stroke-linecap="round"/>
+  <path d="M194 41Q196 41 197 47L198 52 204 54Q210 55 210 57Q210 59 204 60L198 62 197 68Q196 74 194 74Q192 74 191 68L189 62 184 60Q178 59 178 57Q178 55 184 54L189 52 191 47Q192 41 194 41Z" fill="#E7EEB3"/>
+</svg>

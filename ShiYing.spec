@@ -43,6 +43,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='E:/codex/视频获取（爬虫）/assets/windows-version.txt',
     icon=['E:/codex/视频获取（爬虫）/assets/app.ico'],
 )
 coll = COLLECT(

@@ -43,6 +43,7 @@ sources = [root / name for name in ("main.py", "README.md", "THIRD_PARTY.md", ".
 sources.append(root / "pytest.ini")
 for directory, pattern in (("clipharbor", "*.py"), ("tests", "*.py"), ("tools", "*.py"), ("assets", "*"), ("docs", "*.md")):
     sources.extend((root / directory).rglob(pattern))
+sources.extend((root / "tools").rglob("*.ps1"))
 with zipfile.ZipFile(source_zip, "w", zipfile.ZIP_DEFLATED) as archive:
     for file in sorted(set(sources)):
         if file.is_file():

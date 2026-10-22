@@ -5,17 +5,20 @@ from threading import Event
 
 from PySide6.QtCore import Qt, QThread, Signal, QUrl, QMimeData
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
-from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame, QHBoxLayout,
+from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
     QStackedWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView, QScrollArea)
 
 from .engine import Engine, safe_message
 from .models import AppError, Cancelled, VideoInfo, SavedMedia, human_duration, human_size
 from .store import Store
+from .icons import app_icon
+from .widgets import ComboBox as QComboBox
+from . import __version__
 
 STYLE = """
 * { font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; font-size: 14px; }
-QMainWindow, QWidget#main { background: #f4f7f5; color: #173b2f; }
+QMainWindow, QDialog, QWidget#main { background: #f4f7f5; color: #173b2f; }
 QFrame#sidebar { background: #132d24; }
 QLabel { color: #173b2f; background: transparent; }
 QLabel#logo { color: #effbf2; font-size: 30px; font-weight: 700; }
@@ -41,8 +44,34 @@ QPushButton#nav:checked { color: #e3f7e6; background: #274a37; }
 QPushButton#nav:hover { background: #203f31; }
 QPlainTextEdit, QLineEdit, QComboBox { background: #fafcfb; color: #284c3a; border: 1px solid #dce7de; border-radius: 8px; padding: 10px; selection-background-color: #c4e3d0; }
 QPlainTextEdit:focus, QLineEdit:focus { border: 1px solid #55a477; }
-QComboBox { min-height: 20px; }
-QComboBox QAbstractItemView { background: white; selection-background-color: #d5eddd; color: #244832; }
+QComboBox { min-height: 20px; padding: 9px 42px 9px 12px; }
+QComboBox:hover { background: #f4faf6; border-color: #9cbea7; }
+QComboBox:focus, QComboBox:on { border-color: #45976a; background: #f4faf6; }
+QComboBox:disabled { background: #f5f8f5; color: #9aafa0; border-color: #e2eae3; }
+QComboBox::drop-down { subcontrol-origin: padding; subcontrol-position: top right; width: 38px; border: none; background: transparent; }
+QComboBox::down-arrow { image: url(:/shiying/chevron-down.svg); width: 16px; height: 16px; }
+QComboBox::down-arrow:disabled { image: url(:/shiying/chevron-disabled.svg); }
+QComboBox QAbstractItemView { background: #ffffff; border: 1px solid #cddfd2; border-radius: 10px; padding: 5px; outline: none; color: #31533f; selection-background-color: transparent; }
+QFrame#pickerPopup { background: transparent; border: none; }
+QFrame#pickerCard { background: #ffffff; border: 1px solid #cddfd2; border-radius: 12px; }
+QListView#pickerList { background: transparent; border: none; padding: 0; outline: none; selection-background-color: transparent; }
+QCheckBox { spacing: 8px; color: #42624d; }
+QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #c5d7ca; border-radius: 5px; background: #ffffff; }
+QCheckBox::indicator:hover { border-color: #70aa83; background: #f0f7f1; }
+QCheckBox::indicator:checked { background: #278357; border-color: #278357; image: url(:/shiying/check.svg); }
+QCheckBox::indicator:disabled { border-color: #dfe8e1; background: #f2f6f3; }
+QSlider::groove:horizontal { height: 6px; background: #dfe9e2; border: none; border-radius: 3px; }
+QSlider::sub-page:horizontal { background: #2a8b5b; border-radius: 3px; }
+QSlider::add-page:horizontal { background: #dfe9e2; border-radius: 3px; }
+QSlider::handle:horizontal { background: #ffffff; border: 2px solid #2a8b5b; width: 12px; height: 12px; margin: -5px 0; border-radius: 8px; }
+QSlider::handle:horizontal:hover { background: #dff0e4; border-color: #176e44; }
+QSlider::handle:horizontal:pressed { background: #278357; }
+QFrame#playerControls { background: #f4f8f5; border-top: 1px solid #dce7de; }
+QToolTip { color: #244c35; background: #f4faf5; border: 1px solid #ccdfd0; padding: 6px 9px; }
+QMenu { color: #31533f; background: #ffffff; border: 1px solid #d4e2d8; border-radius: 10px; padding: 6px; }
+QMenu::item { padding: 9px 22px; border-radius: 6px; }
+QMenu::item:selected { background: #e8f3eb; color: #1d6544; }
+QMenu::separator { height: 1px; background: #e5ece6; margin: 4px 8px; }
 QProgressBar { border: none; border-radius: 4px; background: #eaf0eb; max-height: 8px; min-height: 8px; }
 QProgressBar::chunk { background: #2e9b65; border-radius: 4px; }
 QTableWidget { border: none; background: white; gridline-color: #eff2ef; color: #2d4b39; selection-background-color: #e0f1e6; selection-color: #173b2f; }
@@ -51,6 +80,9 @@ QPlainTextEdit#logs { font-family: 'Cascadia Code', 'Microsoft YaHei UI'; font-s
 QScrollBar:vertical { background: #f1f5f2; width: 8px; }
 QScrollBar::handle:vertical { background: #cad7cd; min-height: 20px; border-radius: 4px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal { background: #f1f5f2; height: 8px; }
+QScrollBar::handle:horizontal { background: #cad7cd; min-width: 20px; border-radius: 4px; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 """
 
 
@@ -63,22 +95,6 @@ def label(text, name="", wrap=False):
         widget.setFixedHeight(30)
     widget.setWordWrap(wrap)
     return widget
-
-
-def app_icon():
-    pix = QPixmap(128, 128)
-    pix.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pix)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setBrush(QColor("#218956"))
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.drawRoundedRect(0, 0, 128, 128, 29, 29)
-    painter.setBrush(QColor("#eefbf1"))
-    from PySide6.QtGui import QPolygonF
-    from PySide6.QtCore import QPointF
-    painter.drawPolygon(QPolygonF([QPointF(48, 33), QPointF(48, 95), QPointF(94, 64)]))
-    painter.end()
-    return QIcon(pix)
 
 
 class Worker(QThread):
@@ -150,7 +166,7 @@ class Window(QMainWindow):
         sidebar.addSpacing(6)
         sidebar.addWidget(label("链接与会话保存在本机\n用于学习、研究和授权下载", "sideCaption", True))
         sidebar.addSpacing(16)
-        sidebar.addWidget(label("拾影桌面版  /  v1.7.0", "sideCaption"))
+        sidebar.addWidget(label(f"拾影桌面版  /  v{__version__}", "sideCaption"))
         layout.addWidget(side)
         self.stack = QStackedWidget()
         layout.addWidget(self.stack)
@@ -644,6 +660,7 @@ def run():
     app.setStyle("Fusion")
     app.setStyleSheet(STYLE)
     app.setFont(QFont("Microsoft YaHei UI", 10))
+    app.setWindowIcon(app_icon())
     window = Window()
     window.show()
     return app.exec()

@@ -1,0 +1,6 @@
+<RCC><qresource prefix="/shiying">
+<file alias="app.svg">app.svg</file>
+<file alias="chevron-down.svg">ui/chevron-down.svg</file>
+<file alias="chevron-disabled.svg">ui/chevron-disabled.svg</file>
+<file alias="check.svg">ui/check.svg</file>
+</qresource></RCC>

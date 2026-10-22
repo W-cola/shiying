@@ -1,7 +1,6 @@
 """Build a portable Windows app from the tested checkout."""
 import shutil
 import os
-import struct
 import subprocess
 import sys
 import ssl
@@ -11,19 +10,19 @@ from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root))
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+subprocess.run([str(Path(sys.executable).with_name("pyside6-rcc.exe")), str(root / "assets" / "theme.qrc"),
+                "-o", str(root / "clipharbor" / "_resources.py")], check=True)
 from PySide6.QtWidgets import QApplication
-from clipharbor.gui import app_icon
+from clipharbor.icons import export_icons
 app = QApplication([])
 icon_dir = root / "assets"
 icon_dir.mkdir(exist_ok=True)
-png = icon_dir / "app.png"
-app_icon().pixmap(128, 128).save(str(png))
-image = png.read_bytes()
+export_icons(icon_dir)
 icon = icon_dir / "app.ico"
-icon.write_bytes(struct.pack('<HHH', 0, 1, 1) + struct.pack('<BBBBHHII', 128, 128, 0, 0, 1, 32, len(image), 22) + image)
 subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--windowed",
                 "--onedir", "--distpath", str(root / "build" / "desktop-dist"),
                 "--name", "ShiYing", "--icon", str(icon), "--collect-all", "playwright",
+                "--version-file", str(icon_dir / "windows-version.txt"),
                 "--collect-all", "imageio_ffmpeg",
                 "--collect-all", "yt_dlp", "--exclude-module", "PySide6.QtWebEngineCore",
                 "--exclude-module", "PySide6.QtWebEngineWidgets", "--exclude-module", "pytest",
@@ -39,6 +38,7 @@ if ssl_data.is_file():
     shutil.copy2(ssl_data, output / "_internal" / ssl_data.name)
 shutil.copy2(root / "README.md", output / "使用说明.md")
 shutil.copy2(root / "THIRD_PARTY.md", output / "第三方组件说明.md")
+shutil.copy2(icon, output / "拾影.ico")
 license_dir = output / "licenses"
 license_dir.mkdir(exist_ok=True)
 if (root / "assets" / "licenses").exists():

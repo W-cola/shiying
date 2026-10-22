@@ -5,8 +5,9 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal, QRectF
 from PySide6.QtGui import QColor, QImage, QKeySequence, QPainter, QShortcut, QTransform
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoSink
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFrame, QHBoxLayout,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFrame, QHBoxLayout,
     QLabel, QPushButton, QSlider, QTextEdit, QVBoxLayout, QWidget)
+from .widgets import ComboBox as QComboBox
 
 
 def time_text(ms):
@@ -98,7 +99,9 @@ class PlayerDialog(QDialog):
         self.surface.setProperty("audio", result.kind == "audio")
         layout.addWidget(self.surface, 1)
         self.controls = QFrame()
+        self.controls.setObjectName("playerControls")
         controls = QVBoxLayout(self.controls)
+        controls.setContentsMargins(16, 12, 16, 12)
         self.message = QLabel(title)
         self.message.setTextFormat(Qt.TextFormat.PlainText)
         self.message.setWordWrap(True)

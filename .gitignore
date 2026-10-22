@@ -29,3 +29,4 @@ android/app/build/
 *.key
 *.apk
 *.idsig
+*.lnk

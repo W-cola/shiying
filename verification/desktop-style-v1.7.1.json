@@ -1,0 +1,37 @@
+{
+  "version": "desktop-v1.7.1",
+  "automated_tests": 37,
+  "icon_sizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256
+  ],
+  "icon_format": "BGRA bitmap with AND mask for 16–64px, PNG for 128/256px",
+  "windows_shell_icon": "extracted through QFileIconProvider for visual inspection",
+  "shortcut": {
+    "name": "拾影.lnk",
+    "target_type": "direct EXE",
+    "icon": "application ICO"
+  },
+  "portable_state_preserved": true,
+  "controls": [
+    "quality/filter/speed pickers",
+    "popup selection rows and checkmarks",
+    "player seek/volume/brightness sliders",
+    "checkboxes",
+    "menus and tooltips"
+  ],
+  "visual_review": "actual Qt widgets rendered by tools/review_desktop_style.py",
+  "native_windows_review": {
+    "installed_version": "1.7.1",
+    "main_window": "passed",
+    "custom_popup": "rounded translucent popup and shadow confirmed",
+    "selection": "mouse selection confirmed"
+  }
+}

@@ -1,0 +1,127 @@
+"""Shared desktop pickers: consistent popup rows, selection and keyboard support."""
+from PySide6.QtCore import Qt, QSize, QRectF, QEvent, QPoint, Signal
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtWidgets import (QComboBox, QListView, QFrame, QStyledItemDelegate, QStyle,
+    QVBoxLayout, QGraphicsDropShadowEffect)
+
+
+class PickerDelegate(QStyledItemDelegate):
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        return QSize(size.width() + 44, max(38, size.height() + 16))
+
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        current = index.row() == self.parent().currentIndex()
+        rect = QRectF(option.rect).adjusted(2, 1, -2, -1)
+        painter.setPen(Qt.PenStyle.NoPen)
+        if selected or current:
+            painter.setBrush(QColor("#E8F3EB" if selected else "#F2F7F3"))
+            painter.drawRoundedRect(rect, 7, 7)
+        painter.setPen(QColor("#1D6544" if current else "#31533F"))
+        font = option.font
+        font.setBold(current)
+        painter.setFont(font)
+        text_rect = option.rect.adjusted(13, 0, -35, 0)
+        text = option.fontMetrics.elidedText(str(index.data() or ""), Qt.TextElideMode.ElideRight, text_rect.width())
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, text)
+        if current:
+            painter.setPen(QPen(QColor("#278357"), 1.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+            x, y = option.rect.right() - 20, option.rect.center().y()
+            painter.drawLine(x - 4, y, x - 1, y + 3)
+            painter.drawLine(x - 1, y + 3, x + 5, y - 3)
+        painter.restore()
+
+
+class PickerPopup(QFrame):
+    hidden = Signal()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self.hidden.emit()
+
+
+class ComboBox(QComboBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.popup = PickerPopup(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        self.popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.popup.setObjectName("pickerPopup")
+        outer = QVBoxLayout(self.popup)
+        outer.setContentsMargins(10, 8, 10, 12)
+        card = QFrame()
+        card.setObjectName("pickerCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(6, 6, 6, 6)
+        shadow = QGraphicsDropShadowEffect(card)
+        shadow.setBlurRadius(18)
+        shadow.setOffset(0, 3)
+        shadow.setColor(QColor(17, 52, 34, 35))
+        card.setGraphicsEffect(shadow)
+        outer.addWidget(card)
+        view = QListView(card)
+        view.setObjectName("pickerList")
+        view.setFrameShape(QFrame.Shape.NoFrame)
+        view.setUniformItemSizes(True)
+        view.setSpacing(2)
+        view.setMouseTracking(True)
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        view.setModel(self.model())
+        view.setItemDelegate(PickerDelegate(self))
+        view.installEventFilter(self)
+        view.clicked.connect(lambda index: self.choose(index.row()))
+        layout.addWidget(view)
+        self.popup_view = view
+        self.popup.hidden.connect(lambda: QComboBox.hidePopup(self))
+        self.setMaxVisibleItems(8)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def showPopup(self):
+        if not self.count():
+            return
+        self.popup_view.setModel(self.model())
+        index = self.model().index(self.currentIndex(), self.modelColumn(), self.rootModelIndex())
+        self.popup_view.setCurrentIndex(index)
+        rows = min(self.count(), self.maxVisibleItems())
+        height = rows * 42 + 36
+        screen = self.screen().availableGeometry()
+        width = min(max(150, self.width()) + 20, screen.width() - 16)
+        height = min(height, screen.height() - 24)
+        below = self.mapToGlobal(QPoint(-10, self.height()-1))
+        x = max(screen.left()+8, min(below.x(), screen.right()-width-8))
+        y = below.y() if below.y()+height <= screen.bottom()-8 else self.mapToGlobal(QPoint(0, 0)).y()-height+1
+        y = max(screen.top()+8, y)
+        self.popup.resize(width, height)
+        self.popup.move(x, y)
+        self.popup.show()
+        self.popup_view.scrollTo(index)
+        self.popup_view.setFocus(Qt.FocusReason.PopupFocusReason)
+
+    def hidePopup(self):
+        self.popup.hide()
+        super().hidePopup()
+
+    def view(self):
+        return self.popup_view
+
+    def choose(self, row):
+        if row < 0 or row >= self.count():
+            return
+        self.setCurrentIndex(row)
+        self.hidePopup()
+        self.setFocus(Qt.FocusReason.PopupFocusReason)
+        self.activated.emit(row)
+        self.textActivated.emit(self.itemText(row))
+
+    def eventFilter(self, watched, event):
+        if watched is self.popup_view and event.type() == QEvent.Type.KeyPress:
+            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                self.choose(self.popup_view.currentIndex().row())
+                return True
+            if event.key() == Qt.Key.Key_Escape:
+                self.hidePopup()
+                self.setFocus(Qt.FocusReason.PopupFocusReason)
+                return True
+        return super().eventFilter(watched, event)

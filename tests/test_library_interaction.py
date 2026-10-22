@@ -111,6 +111,7 @@ def spin(qt, predicate, seconds=5):
 def test_click_then_play_real_audio_seek_during_play_and_drag_selection(qt, tmp_path):
     workspace = TranscriptWorkspace(tmp_path)
     doc = document(workspace.store)
+    doc["segments"][0]["words"][1]["start"] = 3.2004
     audio = workspace.store.folder(doc["id"])/"audio.m4a"
     run_ffmpeg(["-f", "lavfi", "-i", "sine=frequency=440", "-t", "8", "-c:a", "aac", audio], Event())
     workspace.show_document(doc)
@@ -118,7 +119,8 @@ def test_click_then_play_real_audio_seek_during_play_and_drag_selection(qt, tmp_
     workspace.show()
     spin(qt, lambda: workspace.player.duration() > 7000)
     QTest.mouseClick(workspace.editor.viewport(), Qt.MouseButton.LeftButton, pos=text_point(workspace.editor, 2))
-    assert workspace.player.position() == 3200 and workspace.play.text() == "从此处播放"
+    assert workspace.player.position() == 3201 and workspace.play.text() == "从此处播放"
+    assert workspace.editor.extraSelections()[-1].cursor.selectedText() == "世界"
     assert workspace.player.playbackState() != QMediaPlayer.PlaybackState.PlayingState
     workspace.play.click()
     spin(qt, lambda: workspace.player.position() > 3350)

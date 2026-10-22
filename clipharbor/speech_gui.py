@@ -1,6 +1,7 @@
 """Offline transcript library: continuous text, local inference and audio replay."""
 from pathlib import Path
 from threading import Event
+from math import ceil
 
 from PySide6.QtCore import Qt, QThread, Signal, QUrl
 from PySide6.QtGui import QColor, QTextCursor, QTextCharFormat
@@ -570,7 +571,7 @@ class TranscriptWorkspace(QWidget):
         self.follow = False
         self.stop_at = None
         self.text_cue = True
-        milliseconds = int(at*1000)
+        milliseconds = ceil(at*1000)
         self.cue_position = milliseconds
         self.pending_position = milliseconds if not self.player.duration() else None
         self.player.setPosition(milliseconds)

@@ -1,0 +1,77 @@
+{
+  "version": "desktop-v1.7.0",
+  "date": "2026-10-22",
+  "automated_tests": {
+    "passed": 35,
+    "command": "python -m pytest -q"
+  },
+  "live_samples": [
+    {
+      "sample": "douyin",
+      "audio_bytes": 492043,
+      "ok": true,
+      "platform": "抖音",
+      "kind": "video",
+      "id": "7693747185347940454",
+      "title": "#发布会",
+      "formats": 1,
+      "images": 0,
+      "bytes": 5247595,
+      "validated": "complete audio/video decode and extracted audio decode"
+    },
+    {
+      "sample": "bilibili",
+      "audio_bytes": 5401131,
+      "ok": true,
+      "platform": "B站",
+      "kind": "video",
+      "id": "BV1GJ411x7h7",
+      "title": "【官方 MV】Never Gonna Give You Up - Rick Astley",
+      "formats": 3,
+      "images": 0,
+      "bytes": 26347805,
+      "validated": "complete audio/video decode and extracted audio decode"
+    },
+    {
+      "sample": "kuaishou_album",
+      "ok": true,
+      "platform": "快手",
+      "kind": "images",
+      "id": "3xv5358vvb8eq9k",
+      "title": "关于夏天，是微风，是晚霞，是心跳，是无可替代 #夏天 #风景 #治愈 #图文新星计划",
+      "formats": 11,
+      "images": 10,
+      "bytes": 3802730,
+      "validated": "image headers and all files"
+    },
+    {
+      "sample": "channels",
+      "audio_bytes": 61498,
+      "ok": true,
+      "platform": "视频号",
+      "kind": "video",
+      "id": "A3loS34sJs",
+      "title": "朦胧薄纱蕾丝，冷艳气质惊艳整个秀场",
+      "formats": 2,
+      "images": 0,
+      "bytes": 730352,
+      "validated": "complete audio/video decode and extracted audio decode"
+    }
+  ],
+  "packaged_ui": {
+    "startup_render": "passed",
+    "video": "real Douyin file rendered in packaged player; clock advanced from 0:00 to 0:15 of 0:30",
+    "album": "real Kuaishou album rendered in packaged gallery; switched from 1/10 to 2/10",
+    "network": "Installed Windows executable successfully resolved HTTPS Bilibili metadata, downloaded and combined DASH audio/video using bundled FFmpeg; full output decoded.",
+    "network_bytes": 26347805
+  },
+  "limitations": [
+    "Xiaohongshu parsing covered by deterministic target and data-structure tests; the old note canonical URL without valid share parameters did not return media anonymously.",
+    "Live tests validate only the named samples at the time of testing. Site login, CAPTCHA, CDN and third-party Channels-service availability can change."
+  ],
+  "privacy": "No media URLs, cookies, request headers, local media or browser sessions in this report.",
+  "portable_update": {
+    "existing_state_files": 0,
+    "preserved": true
+  }
+}

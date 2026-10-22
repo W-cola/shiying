@@ -20,6 +20,18 @@ class VideoFormat:
     size: int = 0
     headers: dict = field(default_factory=dict, repr=False)
     alternatives: list[str] = field(default_factory=list, repr=False)
+    mode: str = "direct"
+    assets: list = field(default_factory=list, repr=False)
+    image_indices: list[int] = field(default_factory=list)
+    decode_key: str = field(default="", repr=False)
+
+
+@dataclass
+class ImageAsset:
+    url: str
+    width: int = 0
+    height: int = 0
+    alternatives: list[str] = field(default_factory=list, repr=False)
 
 
 @dataclass
@@ -35,6 +47,18 @@ class VideoInfo:
     engine: str = "direct"
     formats: list[VideoFormat] = field(default_factory=list)
     raw: dict = field(default_factory=dict, repr=False)
+    kind: str = "video"
+    description: str = ""
+    images: list[ImageAsset] = field(default_factory=list)
+
+
+@dataclass
+class SavedMedia:
+    path: object
+    files: list
+    kind: str
+    temporary: bool = False
+    cache_dir: object = None
 
 
 def human_size(size: float) -> str:

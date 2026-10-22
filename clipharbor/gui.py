@@ -3,14 +3,14 @@ from datetime import datetime
 from pathlib import Path
 from threading import Event
 
-from PySide6.QtCore import Qt, QThread, Signal, QUrl
+from PySide6.QtCore import Qt, QThread, Signal, QUrl, QMimeData
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
     QStackedWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView, QScrollArea)
 
 from .engine import Engine, safe_message
-from .models import AppError, Cancelled, human_duration, human_size
+from .models import AppError, Cancelled, VideoInfo, SavedMedia, human_duration, human_size
 from .store import Store
 
 STYLE = """
@@ -113,7 +113,9 @@ class Window(QMainWindow):
         self.last_path = None
         self.operation = ""
         self.closing = False
-        self.setWindowTitle("拾影 · 视频下载工具")
+        self.viewers = []
+        self.pending_info = None
+        self.setWindowTitle("拾影 · 视频、图文与原声")
         self.setWindowIcon(app_icon())
         self.resize(1120, 920)
         self.setMinimumSize(960, 790)
@@ -136,8 +138,8 @@ class Window(QMainWindow):
         sidebar.addLayout(logo_row)
         sidebar.addWidget(label("让灵感，留在本地", "sideCaption"))
         sidebar.addSpacing(42)
-        self.nav_download = QPushButton("↓    下载视频")
-        self.nav_history = QPushButton("≡    下载记录")
+        self.nav_download = QPushButton("↓    收下内容")
+        self.nav_history = QPushButton("≡    我的片段")
         for b in (self.nav_download, self.nav_history):
             b.setObjectName("nav")
             b.setCheckable(True)
@@ -148,7 +150,7 @@ class Window(QMainWindow):
         sidebar.addSpacing(6)
         sidebar.addWidget(label("链接与会话保存在本机\n用于学习、研究和授权下载", "sideCaption", True))
         sidebar.addSpacing(16)
-        sidebar.addWidget(label("拾影  /  v1.0", "sideCaption"))
+        sidebar.addWidget(label("拾影桌面版  /  v1.7.0", "sideCaption"))
         layout.addWidget(side)
         self.stack = QStackedWidget()
         layout.addWidget(self.stack)
@@ -187,8 +189,8 @@ class Window(QMainWindow):
         header = QHBoxLayout()
         titles = QVBoxLayout()
         titles.addWidget(label("CAPTURE YOUR INSPIRATION", "eyebrow"))
-        titles.addWidget(label("把喜欢的视频，收进本地", "headline"))
-        titles.addWidget(label("粘贴分享链接，预览视频信息，然后开始下载。", "muted"))
+        titles.addWidget(label("把喜欢的内容，收进本地", "headline"))
+        titles.addWidget(label("视频、整组图文和原声，在电脑上收藏与播放。", "muted"))
         header.addLayout(titles, 1)
         header.addWidget(label("●  本地运行", "badge"))
         box.addLayout(header)
@@ -196,13 +198,16 @@ class Window(QMainWindow):
         form, formbox = self.panel()
         row = QHBoxLayout()
         row.addWidget(label("01", "section"))
-        row.addWidget(label("添加视频链接", "section"), 1)
+        row.addWidget(label("添加分享链接", "section"), 1)
+        self.clear_button = QPushButton("清空")
+        self.clear_button.clicked.connect(self.clear_input)
+        row.addWidget(self.clear_button)
         paste = QPushButton("粘贴剪贴板")
         paste.clicked.connect(lambda: self.link_input.setPlainText(QApplication.clipboard().text()))
         row.addWidget(paste)
         formbox.addLayout(row)
         self.link_input = QPlainTextEdit()
-        self.link_input.setPlaceholderText("在这里粘贴抖音分享文字或视频链接…\n例如 https://v.douyin.com/xxxxxxxx/\n也支持 yt-dlp 可解析的单个视频网页和 MP4 直链。")
+        self.link_input.setPlaceholderText("粘贴抖音、小红书、B站、快手或视频号分享文字…\n支持单条视频、图文与媒体直链。\n视频号 sph 分享链接使用与安卓版相同的在线解析服务。")
         self.link_input.setFixedHeight(115)
         self.link_input.textChanged.connect(self.link_changed)
         formbox.addWidget(self.link_input)
@@ -212,7 +217,7 @@ class Window(QMainWindow):
         self.browser_button.setToolTip("打开独立浏览器，可手动完成登录或验证码。请播放目标视频，读取到地址后会自动返回。")
         self.browser_button.clicked.connect(lambda: self.resolve(True))
         actions.addWidget(self.browser_button)
-        self.resolve_button = QPushButton("解析视频  →")
+        self.resolve_button = QPushButton("解析内容  →")
         self.resolve_button.setObjectName("primary")
         self.resolve_button.clicked.connect(lambda: self.resolve(False))
         actions.addWidget(self.resolve_button)
@@ -222,7 +227,7 @@ class Window(QMainWindow):
         preview, pb = self.panel()
         row = QHBoxLayout()
         row.addWidget(label("02", "section"))
-        row.addWidget(label("视频与保存设置", "section"), 1)
+        row.addWidget(label("内容与保存设置", "section"), 1)
         self.platform_badge = label("等待解析", "badge")
         row.addWidget(self.platform_badge)
         pb.addLayout(row)
@@ -243,7 +248,8 @@ class Window(QMainWindow):
         row.addLayout(vb, 1)
         pb.addLayout(row)
         row = QHBoxLayout()
-        row.addWidget(label("视频画质"))
+        self.format_caption = label("视频画质")
+        row.addWidget(self.format_caption)
         self.formats = QComboBox()
         self.formats.setEnabled(False)
         self.formats.addItem("先解析视频")
@@ -262,6 +268,17 @@ class Window(QMainWindow):
         self.folder_button.clicked.connect(self.choose_folder)
         row.addWidget(self.folder_button)
         pb.addLayout(row)
+        media_actions = QHBoxLayout()
+        self.preview_button = QPushButton("应用内播放 / 预览")
+        self.preview_button.setEnabled(False)
+        self.preview_button.clicked.connect(self.preview)
+        self.audio_button = QPushButton("只收下声音 · M4A")
+        self.audio_button.setEnabled(False)
+        self.audio_button.clicked.connect(self.extract_sound)
+        media_actions.addWidget(self.preview_button)
+        media_actions.addWidget(self.audio_button)
+        media_actions.addStretch()
+        pb.addLayout(media_actions)
         box.addWidget(preview)
 
         progress_panel, pr = self.panel()
@@ -308,11 +325,23 @@ class Window(QMainWindow):
         box = QVBoxLayout(page)
         box.setContentsMargins(32, 35, 32, 32)
         box.setSpacing(20)
-        box.addWidget(label("你的本地视频库", "headline"))
-        box.addWidget(label("最近 300 条完成记录。双击记录可打开文件所在位置。", "muted"))
+        box.addWidget(label("我的片段", "headline"))
+        box.addWidget(label("视频、图文和音频集中收藏。双击即可在应用内播放或预览。", "muted"))
+        filters = QHBoxLayout()
+        self.history_kind = QComboBox()
+        for title, kind in (("全部", ""), ("视频", "video"), ("图文", "images"), ("音频", "audio")):
+            self.history_kind.addItem(title, kind)
+        self.history_search = QLineEdit()
+        self.history_search.setPlaceholderText("搜索标题或作者")
+        self.history_search.setClearButtonEnabled(True)
+        filters.addWidget(self.history_kind)
+        filters.addWidget(self.history_search, 1)
+        box.addLayout(filters)
+        self.history_kind.currentIndexChanged.connect(self.refresh_history)
+        self.history_search.textChanged.connect(self.refresh_history)
         panel, pb = self.panel()
         self.history = QTableWidget(0, 4)
-        self.history.setHorizontalHeaderLabels(["视频", "来源", "大小", "下载时间"])
+        self.history.setHorizontalHeaderLabels(["内容", "来源 / 类型", "大小", "保存时间"])
         self.history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.history.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.history.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -322,6 +351,14 @@ class Window(QMainWindow):
             self.history.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeMode.ResizeToContents)
         self.history.cellDoubleClicked.connect(self.open_history)
         pb.addWidget(self.history)
+        actions = QHBoxLayout()
+        for text, callback in (("播放 / 预览", self.play_record), ("提取原声", self.extract_record),
+                               ("复制文件", self.copy_record), ("打开位置", self.reveal_record),
+                               ("重新解析", self.resolve_record), ("删除", self.delete_record)):
+            button = QPushButton(text)
+            button.clicked.connect(callback)
+            actions.addWidget(button)
+        pb.addLayout(actions)
         box.addWidget(panel, 1)
         return page
 
@@ -339,6 +376,10 @@ class Window(QMainWindow):
             self.video_title.setText("视频信息将在这里显示")
             self.video_meta.setText("解析完成后，可查看标题、作者、时长与可用画质。")
             self.platform_badge.setText("等待解析")
+            self.preview_button.setEnabled(False)
+            self.audio_button.setEnabled(False)
+            self.download_button.setText("↓  保存内容")
+            self.format_caption.setText("视频画质")
 
     def append_log(self, text):
         self.logs.appendPlainText(datetime.now().strftime("%H:%M:%S") + "  " + text)
@@ -347,12 +388,13 @@ class Window(QMainWindow):
         if self.busy():
             return
         self.operation = action
+        self.pending_info = args[0] if args and isinstance(args[0], VideoInfo) else None
         self.progress_bar.setRange(0, 0)
         self.percent.setText("")
         self.status.setText("正在解析…" if action == "resolve" else "正在下载…")
         self.detail.setText("请稍候，可随时取消任务。")
         for widget in (self.link_input, self.resolve_button, self.browser_button, self.download_button,
-                       self.folder_button, self.formats):
+                       self.folder_button, self.formats, self.preview_button, self.audio_button, self.clear_button):
             widget.setEnabled(False)
         self.cancel_button.setEnabled(True)
         self.worker = Worker(self.store.root, action, args)
@@ -387,19 +429,31 @@ class Window(QMainWindow):
                 self.formats.addItem(f.label + (" · " + human_size(f.size) if f.size else ""))
             self.progress_bar.setValue(0)
             self.status.setText("解析完成")
-            self.detail.setText("选择画质和保存位置，点击「下载视频」。")
+            self.download_button.setText("↓  保存图文" if result.kind == "images" else "↓  保存视频")
+            self.format_caption.setText("保存范围" if result.kind == "images" else "视频画质")
+            self.preview_button.setText("应用内预览图文" if result.kind == "images" else "应用内播放")
+            self.detail.setText(f"共 {len(result.images)} 张图片，可保存整组或选择单张，并附带正文。" if result.kind == "images" else "选择画质后播放、保存视频，或只保存声音。")
             self.append_log("解析成功，已匹配视频 ID " + result.video_id)
+        elif self.operation == "prepare_preview":
+            if self.closing:
+                import shutil
+                shutil.rmtree(result.cache_dir, ignore_errors=True)
+                return
+            self.show_viewer(result, self.pending_info.title, self.pending_info.description)
+            self.status.setText("应用内预览")
+            self.detail.setText("预览不会新增下载记录；关闭播放器后清理临时文件。")
         else:
-            self.last_path = result
+            saved = result if isinstance(result, SavedMedia) else SavedMedia(result, [result], "video")
+            self.last_path = Path(saved.path)
             try:
-                self.store.add_history(self.info, result)
+                self.store.add_history(self.pending_info or self.info, saved)
             except OSError:
                 self.append_log("视频已保存，但下载记录写入失败。")
             self.progress_bar.setValue(100)
             self.percent.setText("100%")
             self.status.setText("下载完成")
-            self.detail.setText(f"已保存 {human_size(result.stat().st_size)} · {result.name}")
-            self.append_log("保存位置：" + str(result))
+            self.detail.setText(f"已保存 {human_size(sum(Path(p).stat().st_size for p in saved.files))} · {self.last_path.name}")
+            self.append_log("保存位置：" + str(self.last_path))
             self.refresh_history()
 
     def failed(self, message):
@@ -420,11 +474,13 @@ class Window(QMainWindow):
         self.worker = None
         worker.deleteLater()
         self.cancel_button.setEnabled(False)
-        for widget in (self.link_input, self.resolve_button, self.browser_button, self.folder_button):
+        for widget in (self.link_input, self.resolve_button, self.browser_button, self.folder_button, self.clear_button):
             widget.setEnabled(True)
         self.download_button.setEnabled(self.info is not None)
         self.formats.setEnabled(self.info is not None)
         self.source_button.setEnabled(self.info is not None)
+        self.preview_button.setEnabled(self.info is not None)
+        self.audio_button.setEnabled(self.info is not None and self.info.kind != "images")
         if self.closing:
             self.close()
 
@@ -472,21 +528,104 @@ class Window(QMainWindow):
             QDesktopServices.openUrl(QUrl(self.info.page_url))
 
     def refresh_history(self):
-        rows = self.store.read("history.json", [])
+        rows = self.store.records(self.history_kind.currentData() or "", self.history_search.text())
         self.history.setRowCount(len(rows))
         for row, item in enumerate(rows):
-            for column, text in enumerate((item["title"], item["platform"], human_size(item["size"]), item["time"].replace("T", " ")[:16])):
+            kind = {"video": "视频", "images": "图文", "audio": "音频"}.get(item.get("kind", "video"), "视频")
+            for column, text in enumerate((item.get("title", "未命名"), item.get("platform", "") + " · " + kind, human_size(item.get("size", 0)), item.get("time", "").replace("T", " ")[:16])):
                 cell = QTableWidgetItem(text)
-                cell.setData(Qt.ItemDataRole.UserRole, item["path"])
+                cell.setData(Qt.ItemDataRole.UserRole, item)
+                cell.setToolTip(item.get("title", "") + "\n" + item.get("author", "") + "\n" + item["path"])
                 self.history.setItem(row, column, cell)
             self.history.setRowHeight(row, 48)
 
     def open_history(self, row, column):
-        path = Path(self.history.item(row, 0).data(Qt.ItemDataRole.UserRole))
-        if path.parent.exists():
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
-        else:
-            QMessageBox.information(self, "文件位置不可用", "文件可能已被移动，原保存文件夹已不存在。")
+        self.play_record()
+
+    def clear_input(self):
+        if not self.busy():
+            self.link_input.clear()
+            self.link_changed()
+            self.status.setText("准备就绪")
+            self.detail.setText("粘贴一条新的分享链接。")
+            self.progress_bar.setValue(0)
+
+    def preview(self):
+        if self.info and not self.busy():
+            self.start("prepare_preview", (self.info, self.info.formats[self.formats.currentIndex()]))
+
+    def extract_sound(self):
+        if self.info and self.info.kind != "images" and not self.busy():
+            self.start("extract_audio", (self.info, self.info.formats[self.formats.currentIndex()], Path(self.folder_input.text()) / "原声"))
+
+    def selected_record(self):
+        row = self.history.currentRow()
+        return self.history.item(row, 0).data(Qt.ItemDataRole.UserRole) if row >= 0 else None
+
+    def show_viewer(self, result, title, description=""):
+        from .player import GalleryDialog, PlayerDialog
+        dialog = GalleryDialog(result, title, description, self) if result.kind == "images" else PlayerDialog(result, title, self)
+        self.viewers.append(dialog)
+        dialog.destroyed.connect(lambda: self.viewers.remove(dialog) if dialog in self.viewers else None)
+        dialog.show()
+
+    def play_record(self):
+        record = self.selected_record()
+        if not record:
+            return
+        files = [Path(x) for x in record.get("files") or [record["path"]]]
+        if not files or any(not path.is_file() for path in files):
+            QMessageBox.information(self, "文件不可用", "文件已移动或删除，可选择「重新解析」再次保存。")
+            return
+        self.show_viewer(SavedMedia(Path(record["path"]), files, record.get("kind", "video")), record["title"], record.get("description", ""))
+
+    def extract_record(self):
+        record = self.selected_record()
+        if not record or self.busy():
+            return
+        if record.get("kind", "video") != "video":
+            QMessageBox.information(self, "选择视频", "请先选择一条已保存的视频，再提取原声。")
+            return
+        info = VideoInfo(record.get("url", ""), record.get("url", ""), Path(record["path"]).stem[-30:], record["title"],
+                         record.get("author", ""), platform=record.get("platform", ""))
+        self.start("extract_audio", (info, None, Path(self.folder_input.text()) / "原声", Path(record["path"])))
+
+    def copy_record(self):
+        record = self.selected_record()
+        if record:
+            mime = QMimeData()
+            mime.setUrls([QUrl.fromLocalFile(x) for x in record.get("files") or [record["path"]] if Path(x).is_file()])
+            QApplication.clipboard().setMimeData(mime)
+            QMessageBox.information(self, "文件已复制", "可以粘贴到文件夹或支持接收文件的聊天窗口中。")
+
+    def reveal_record(self):
+        record = self.selected_record()
+        if record:
+            path = Path(record["path"])
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path if path.is_dir() else path.parent)))
+
+    def resolve_record(self):
+        record = self.selected_record()
+        if record and not self.busy():
+            self.link_input.setPlainText(record.get("url", ""))
+            self.switch_page(0)
+            self.resolve(False)
+
+    def delete_record(self):
+        record = self.selected_record()
+        if not record or self.busy():
+            return
+        if self.viewers:
+            QMessageBox.information(self, "请先关闭预览", "关闭播放器或图文预览后，再删除本地文件。")
+            return
+        answer = QMessageBox.question(self, "删除这条片段？", "将删除这条记录及本次保存的实际文件。图文会整组删除，包括正文。\n其他批次的文件会保留。",
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Cancel)
+        if answer == QMessageBox.StandardButton.Yes:
+            try:
+                self.store.delete_record(record)
+                self.refresh_history()
+            except OSError as error:
+                QMessageBox.warning(self, "未能完成删除", str(error))
 
     def closeEvent(self, event):
         if self.worker:
@@ -495,6 +634,8 @@ class Window(QMainWindow):
             self.status.setText("正在停止任务并关闭…")
             event.ignore()
         else:
+            for viewer in list(self.viewers):
+                viewer.close()
             event.accept()
 
 

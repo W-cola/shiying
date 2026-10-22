@@ -16,6 +16,8 @@ def prepare_runtime(output: Path):
     icu = pefile.PE(str(collision), fast_load=True)
     icu.parse_data_directories([pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]])
     exports = {s.name for s in icu.DIRECTORY_ENTRY_EXPORT.symbols}
+    qt.close()
+    icu.close()
     if native_icu and b"ucnv_open" not in exports:
         # An ICU build with suffixed exports (e.g. ucnv_open_78) is unrelated
         # to the Windows ICU shim required by this Qt build. It was picked

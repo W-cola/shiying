@@ -17,6 +17,8 @@ readme = readme.replace("双击项目中的 `启动拾影.cmd`，或 `dist/ShiYi
 shutil.copy2(root / "THIRD_PARTY.md", output / "第三方组件说明.md")
 license_dir = output / "licenses"
 license_dir.mkdir(exist_ok=True)
+if (root / "assets" / "licenses").exists():
+    shutil.copytree(root / "assets" / "licenses", license_dir, dirs_exist_ok=True)
 for distribution in distributions():
     name = distribution.metadata.get("Name", "unknown")
     for file in distribution.files or []:
@@ -38,7 +40,8 @@ with zipfile.ZipFile(portable, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as ar
             archive.write(file, Path("拾影") / relative)
 source_zip = root / "dist" / "拾影-源码.zip"
 sources = [root / name for name in ("main.py", "README.md", "THIRD_PARTY.md", ".gitignore", "启动拾影.cmd", "requirements.txt", "requirements-dev.txt", "requirements-lock.txt")]
-for directory, pattern in (("clipharbor", "*.py"), ("tests", "*.py"), ("tools", "*.py"), ("assets", "*"), ("verification", "*.json")):
+sources.append(root / "pytest.ini")
+for directory, pattern in (("clipharbor", "*.py"), ("tests", "*.py"), ("tools", "*.py"), ("assets", "*"), ("docs", "*.md")):
     sources.extend((root / directory).rglob(pattern))
 with zipfile.ZipFile(source_zip, "w", zipfile.ZIP_DEFLATED) as archive:
     for file in sorted(set(sources)):

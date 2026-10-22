@@ -22,3 +22,10 @@ android/app/build/
 *.pcm
 *.wav
 .worktrees/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.apk
+*.idsig

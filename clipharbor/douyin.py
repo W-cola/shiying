@@ -56,9 +56,15 @@ def script_payloads(page_html: str) -> list:
                     break
                 except ValueError:
                     continue
-        for match in re.finditer(r"(?:window\.)?(?:_ROUTER_DATA|__INITIAL_STATE__)\s*=\s*", content):
+        for match in re.finditer(r"(?:window\.)?(?:_ROUTER_DATA|_SSR_DATA|__INITIAL_STATE__|__INITIAL_SSR_STATE__|__APOLLO_STATE__|INIT_STATE|__INITIAL_DATA__|__NEXT_DATA__|__playinfo__)\s*=\s*", content):
             try:
-                payloads.append(json.JSONDecoder().raw_decode(content[match.end():].lstrip())[0])
+                # Replace JavaScript's undefined only outside quoted strings.
+                state = re.sub(r'"(?:\\.|[^"\\])*"|\bundefined\b', lambda m: "null" if m[0] == "undefined" else m[0], content[match.end():].lstrip())
+                if state.startswith("JSON.parse("):
+                    encoded = json.JSONDecoder().raw_decode(state[len("JSON.parse("):])[0]
+                    payloads.append(json.loads(encoded))
+                else:
+                    payloads.append(json.JSONDecoder().raw_decode(state)[0])
             except ValueError:
                 continue
     return payloads
@@ -83,6 +89,13 @@ def video_from_payload(payload, target_id: str, source_url: str, page_url: str) 
         node_id = str(node.get("aweme_id") or node.get("awemeId") or node.get("id") or "")
         if target_id and node_id != target_id:
             continue
+        if node.get("has_drm") or node.get("drm") or node.get("is_live"):
+            continue
+        if node.get("images") or node.get("image_post_info"):
+            from .platforms import douyin_album
+            info = douyin_album(node, node_id, source_url, page_url)
+            if info:
+                return info
         video = node.get("video")
         if not isinstance(video, dict) or not node_id:
             continue
@@ -145,7 +158,7 @@ class DouyinResolver:
                 raise AppError("分享链接没有跳转到抖音视频页面，请检查链接。")
             target = douyin_id(response.url) or douyin_id(source)
             if not target:
-                raise AppError("未找到视频编号。请打开分享链接，复制单个视频的网页地址；暂不支持主页、直播和图集。")
+                raise AppError("未找到内容编号。请打开分享链接，复制单条视频或图文的网页地址。")
             canonical = f"https://www.douyin.com/video/{target}"
             for payload in script_payloads(response.text):
                 info = video_from_payload(payload, target, source, canonical)
@@ -227,27 +240,20 @@ class DouyinResolver:
                                 if info:
                                     self._save_state(context)
                                     return info
-                            data = page.evaluate("""() => {
+                            page.evaluate("""() => {
                                 const vs = [...document.querySelectorAll('video')].filter(v => v.getBoundingClientRect().width > 0);
                                 vs.sort((a,b) => b.getBoundingClientRect().width*b.getBoundingClientRect().height-a.getBoundingClientRect().width*a.getBoundingClientRect().height);
                                 const v = vs[0]; if (!v) return null;
                                 v.muted = true; v.play().catch(()=>{});
-                                return {url:v.currentSrc||v.src, width:v.videoWidth, height:v.videoHeight,
-                                    duration:Number.isFinite(v.duration)?v.duration:0, poster:v.poster,
-                                    title:document.title, ua:navigator.userAgent};
+                                return null;
                             }""")
-                            if data and data.get("url", "").startswith(("http://", "https://")):
-                                self._save_state(context)
-                                label = f"当前播放画质 · {data['width']}×{data['height']}" if data["height"] else "当前播放画质"
-                                fmt = VideoFormat("player", label, data["url"], height=data["height"], width=data["width"],
-                                                  headers={"User-Agent": data["ua"], "Referer": page.url})
-                                return VideoInfo(source, page.url, observed_id[0] or stable_id(source), data["title"].removesuffix(" - 抖音"),
-                                                 duration=data["duration"], thumbnail=data["poster"], platform="抖音", formats=[fmt])
+                            # Playing can trigger target-bound JSON, but currentSrc alone
+                            # can be a loading animation or recommendation. Never return it.
                         except BrowserError:
                             pass
                     page.wait_for_timeout(600)
                 self._save_state(context)
-                raise AppError("没有读到可下载的视频。请点击「浏览器辅助解析」，完成登录/验证码并播放目标视频。视频可能已删除、受限，或属于暂不支持的图集/直播。")
+                raise AppError("没有读到目标内容的完整媒体。请点击「浏览器辅助解析」，完成登录或验证后再读取。直播和受保护内容不支持保存。")
             finally:
                 context.close()
 

@@ -30,7 +30,7 @@ def is_douyin(url: str) -> bool:
 
 def douyin_id(url: str) -> str:
     parts = urlsplit(url)
-    match = re.search(r"/(?:share/)?video/(\d+)", parts.path)
+    match = re.search(r"/(?:share/)?(?:video|note|slides)/(\d+)", parts.path)
     if match:
         return match.group(1)
     for key in ("modal_id", "aweme_id", "item_id"):

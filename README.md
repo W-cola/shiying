@@ -1,91 +1,84 @@
-# 拾影 · 视频下载工具
+# 拾影 · 视频、图文与原声
 
-安卓应用已升级至 v1.7.0：保留一个分享链接输入框和原视频解析结果，新增独立音频保存（M4A，音乐/拾影）与应用内音频播放；已保存的视频也能直接提取原声。统一升级片段卡、底部详情面板、图标、文字对比和过渡动画，片段库新增分类、搜索，并保留图文整组滑动预览、相册保存与正确方向的沉浸式全屏。电脑可在 Codex 右侧打开 [真实 APK 预览](http://127.0.0.1:8787/)，修改源码后点击按钮重新编译安装。重启预览运行 `android/启动安卓预览.cmd`。详情见 [安卓说明](android/README.md) 和 [交互调研](android/DESIGN.md)，安装包为 `dist/拾影-安卓版-v1.7.0.apk`，原签名可覆盖安装保留记录。以下为原有 Windows 桌面版说明，其功能未随 APK 一起升级。
+Windows 桌面版与原生 Android 应用。粘贴分享链接，收藏视频、整组图文与独立音频。源码仓库：https://github.com/W-cola/shiying 。
 
-本地运行的 Windows 桌面应用。粘贴抖音整段分享文字，解析视频，选择画质与保存位置，然后下载。也支持 yt-dlp 能解析的其他单个视频网页和视频直链。
+## Windows 桌面版 v1.7.0
 
-## 直接使用
+双击项目根目录的 `启动拾影.cmd`，或 `dist/ShiYing/拾影.exe`。便携版解压后直接打开 `拾影.exe`；保留同目录的 `_internal` 文件夹，无需安装 Python。
 
-1. 双击项目中的 `启动拾影.cmd`，或 `dist/ShiYing/拾影.exe`。
-2. 粘贴整段分享文字，点击「解析视频」。
-3. 选择解析到的画质和保存文件夹，点击「下载视频」。
-4. 下载完成后点击「打开保存文件夹」。下载记录保存在「下载记录」页面。
+1. 粘贴一条完整分享文字，点击「解析内容」。支持抖音、小红书、B站、快手、视频号，以及 yt-dlp 支持的其他单个视频和图片直链。
+2. 选择画质或「全部图片 / 第 N 张」，可在应用内播放、预览，或保存到所选文件夹。
+3. 「只收下声音」将原声音轨保存为独立 M4A；已有视频也能从「我的片段」提取原声。AAC 优先无损封装，其他可处理编码转成 AAC。无音轨会明确失败。
+4. 「我的片段」支持全部 / 视频 / 图文 / 音频分类，按标题或作者搜索。图文每次保存为一个独立文件夹，含原顺序图片与 UTF-8 正文，不会散成重复记录。
+5. 双击片段在应用内播放或预览。视频支持暂停、拖动进度、前后跳转 15 秒、0.5–2× 倍速、循环、全屏、画面旋转、音量与亮度调节。全屏轻触显示控制，播放时 3 秒后隐藏，Esc 先退出全屏；空格暂停，方向键跳转。画面左右拖动调进度，左半屏上下拖动调亮度，右半屏上下拖动调音量。
+6. 图文支持左右拖动、方向键和上一张 / 下一张，保留张数、顺序及正文。可以复制文件到聊天窗口或其他文件夹，也可打开原位置、重新解析。
+7. 删除前会确认，删除所选批次的文件和记录；其他批次保留。预览窗口打开时需先关闭再删除。原 v1.0 的本地下载记录继续可用。
 
-不需要安装 Python。复制或分发时，请保留整个 `dist/ShiYing` 文件夹，包含 `_internal`；不能只复制 exe。
+在线播放采用临时下载缓存，不新增下载记录或公开保存文件；关闭播放器清理缓存，下次预览清理超过 24 小时的遗留缓存。临时媒体上限 1 GiB。Windows 轮子自带 FFmpeg，无需另配音频工具。
 
-抖音要求登录或验证码时，点击「浏览器辅助解析」，在弹出的独立浏览器中手动完成，并播放目标视频。应用等待最多 3 分钟，读到视频后自动关闭浏览器并返回。请留在目标视频页面。需要本机已安装 Microsoft Edge 或 Chrome。
+## 平台能力与边界
 
-## 功能与实际边界
+| 平台 | 已接入内容 | 验证范围 |
+| --- | --- | --- |
+| 抖音 | 视频、图文 / 图集、短链及 video/note/slides 页面 | 真实视频保存、完整解码与音频提取；图文数据回归 |
+| 小红书 | 视频、图文、单张 / 多张图片、正文 | 目标编号、视频流、图片顺序的数据回归；真实网站可能要求登录与验证 |
+| B站 | BV/AV、b23.tv、当前分 P、DASH 音视频整理、动态与专栏图文 | 真实公开视频音视频保存、完整解码与音频提取；分 P、图文和受保护片段拒绝回归 |
+| 快手 | 视频、图集、Apollo 网页状态及分享短链 | 真实 10 张图文与正文完整保存；视频与引用结构回归 |
+| 视频号 | sph 分享视频、可访问网页提供的视频和图文 | 真实 sph 视频保存、完整解码与音频提取；网页数据与格式参数回归 |
+| 直链 / 其他网页 | 常见图片、视频直链及 yt-dlp 支持的单个录播视频 | 本地 HTTP 下载、续传、错误内容、取消回归 |
 
-- 自动提取分享文字中的 http/https 链接，展开抖音短链接。
-- 优先读取正常分享页的公开播放信息；没有信息时用 Playwright 加载真实浏览器，并读取目标视频的页面数据或播放器地址。
-- 校验目标视频编号，避免从推荐列表中误选其他视频。下载标题为空时使用视频编号命名。
-- 选择页面实际提供的画质；并不保证每条链接都有原画、多种画质或无水印版本。不会额外处理或移除水印。
-- 流式下载、进度、速度、取消、HTTP Range 续传、同名文件保护、下载历史。取消和网络中断会保留 `.part` 临时文件；同一个有效地址再次下载可续传。地址刷新后可能重新下载。
-- 下载器检查 HTTP 状态、返回内容类型和文件长度，不会把登录页面当作 MP4。
-- 当前针对单个录播视频；不支持直播、图集、主页或批量合集。私密、删除、区域限制及 DRM 视频可能无法下载。
-- 网站接口可能变化。抖音没有为本应用提供稳定的官方下载 API；真实浏览器与解析器也无法保证所有视频永远成功。
-- 通用网站优先提供包含音频的视频格式；本机有 FFmpeg 时还提供自动合并的最佳画质。FFmpeg 是可选项，普通抖音 MP4 下载不需要它。
+视频号 sph 使用与安卓版相同的公开在线解析服务 `https://v.mtotech.com/api/resolve`，仅发送粘贴的分享 URL，不发送本机 Cookie；服务可用性由第三方决定。
 
-应用与会话数据保存在 exe 同目录的 `data/`，默认下载目录为同目录的 `downloads/`。源码运行时位于项目根目录。请放在可写目录中使用。浏览器使用本应用独立的 `data/browser-profile/`，不会读取日常浏览器的个人配置。登录会话属于敏感数据，请勿把 `data/` 或浏览器配置发给别人。关闭应用后可删除 `data/browser-profile/` 和 `data/browser-state.json` 来清除会话。
+需要登录或验证码时，点击「浏览器辅助解析」，在应用专用 Edge / Chrome 中手动完成。浏览器状态保存在本机，按 Cookie 域隔离，不读取日常浏览器配置。抖音浏览器路径只接受匹配目标编号的数据，不会把 `currentSrc` 的加载动画直接认作视频。
 
-适用于自己的视频、已获授权的视频和合法研究用途。下载不改变内容的版权或使用权限。
+实际画质与可访问内容由网站决定，不保证无水印或所有链接都成功；不移除水印，不支持直播、私密、删除、区域限制或 DRM 内容，也不会将受保护试看当作完整视频。Android 的系统分享、媒体库相册路径等按 Windows 的文件夹、剪贴板和应用内播放器对应实现。
 
-## 本次真实测试
+## 本机数据与升级
 
-测试链接：`https://v.douyin.com/78nnhuQHT8k/`
+打包版的设置、历史和独立浏览器状态保存在 exe 同目录 `data/`；默认保存到同目录 `downloads/`。源码运行使用项目根目录，或设置 `CLIPHARBOR_DATA` 指向独立数据目录。用户文件不进入 Git。
 
-- 展开后的目标视频编号：`7693840282563565674`
-- 作者：口罩哥研报60秒
-- 分享页提供的播放画质：854×480
-- 实际保存：10,749,131 字节 MP4
-- FFprobe 检查：H.264 视频、AAC 音频，文件时长约 86.75 秒；分享页声明约 83.73 秒，以下载文件为准。
-- 浏览器备用路径正确匹配相同视频，并读取到 8 个可用视频源。
-- 16 项自动测试通过，完成整个视频的 FFmpeg 解码检查；打包版也完成实际下载和界面渲染验证。
+`tools/build.py` 先输出到 `build/desktop-dist/ShiYing`。关闭旧版后运行 `tools/install_desktop.py`，仅更新程序文件，保留 `dist/ShiYing/data` 与 `downloads`。不要用清空应用文件夹的方式升级。
 
-本次结果仅代表此链接在测试时成功；访问状态和可用画质由平台决定。
+## 安卓版
 
-## 开发运行
+[安卓版说明](android/README.md) 与 [交互设计](android/DESIGN.md) 保留。安卓 v1.7.0 的源码位于 `android/`；APK、签名、模拟器和本机会话不上传 GitHub。安卓本机预览 `http://127.0.0.1:8787/` 是模拟器操作面板，尚非独立网页产品。
 
-Python 3.12+，Windows 10/11。
+## 开发与验证
+
+Python 3.12+，Windows 10/11：
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe main.py
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe tools\gui_smoke.py
 ```
 
-`requirements-lock.txt` 记录本次实际安装的完整版本；重现依赖可安装该文件。开发环境若没有 Edge/Chrome，可安装 Playwright Chromium：
+若没有 Edge / Chrome，可安装 Playwright Chromium：
 
 ```powershell
 .\.venv\Scripts\python.exe -m playwright install chromium
 ```
 
-命令行解析与下载：
+构建、关闭旧版后安装、打包：
 
 ```powershell
-.\.venv\Scripts\python.exe main.py --url "https://v.douyin.com/78nnhuQHT8k/" --download --output ".\downloads"
-```
-
-测试与打包：
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe tools\build.py
+.\.venv\Scripts\python.exe tools\install_desktop.py
+.\.venv\Scripts\python.exe tools\package.py
 ```
 
-更新解析依赖后需重新测试并打包：
+`requirements-lock.txt` 记录验证环境的依赖版本。`tools/verify_desktop_live.py` 为可选联网验证，会实际访问样本、保存测试媒体并提取音频，结果写入 `.tmp/desktop-live/report.json`。其结果只代表对应样本在测试时成功。
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install --upgrade -r requirements.txt
-```
+## 源码结构与网页改造
 
-## 项目结构
+- `clipharbor/engine.py`：统一解析、下载、进度、续传和取消入口。
+- `clipharbor/platforms.py`、`douyin.py`：各平台目标编号、正常网页数据与独立浏览器解析。
+- `clipharbor/media.py`、`channels_codec.py`：整组图文、正文、音视频整理、音频提取及临时缓存。
+- `clipharbor/player.py`、`gui.py`：Qt 应用内播放器、图文预览与界面。
+- `clipharbor/store.py`：本地设置、分类搜索、旧记录兼容与准确删除。
+- `tests/`：Windows 桌面版测试；`android/tests/`：独立安卓测试，不由 pytest 自动收集。
+- [网页版交接](docs/网页版交接.md)：供网页开发平台阅读的入口与改造边界。
 
-- `clipharbor/gui.py`：PySide6 界面与后台任务。
-- `clipharbor/douyin.py`：分享页、页面数据、独立浏览器解析。
-- `clipharbor/engine.py`：通用解析、流式下载、续传。
-- `clipharbor/store.py`：本地设置和下载历史。
-- `tests/`：分享文本、目标视频选择、下载、续传、错误内容、取消和 Cookie 域隔离测试。
-
-参考：[yt-dlp 官方项目](https://github.com/yt-dlp/yt-dlp)、[Playwright 浏览器支持](https://playwright.dev/python/docs/browsers)。
+仅用于自己的内容、已获授权内容和合法研究用途；下载不改变内容的版权或使用权限。第三方依赖与许可证见 [THIRD_PARTY.md](THIRD_PARTY.md)。

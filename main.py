@@ -7,6 +7,11 @@ from pathlib import Path
 
 
 def main():
+    # pythonw/PyInstaller --windowed sets these to None. Network subprocesses
+    # and third-party libraries may still expect writable standard streams.
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:
+            setattr(sys, name, open(os.devnull, "w", encoding="utf-8"))
     parser = argparse.ArgumentParser(description="拾影 · 视频解析与下载")
     parser.add_argument("--url", help="使用命令行解析分享文字或视频链接")
     parser.add_argument("--download", action="store_true", help="下载第一个可用画质")
@@ -43,19 +48,29 @@ def main():
         from clipharbor.engine import Engine
         from clipharbor.store import Store
         store = Store()
-        engine = Engine(store.root, lambda s: print(s, flush=True))
+        logs = []
+        def log(message):
+            from clipharbor.engine import safe_message
+            message = safe_message(message)
+            logs.append(message)
+            print(message, flush=True)
+        engine = Engine(store.root, log)
         try:
             info = engine.resolve(args.url, args.browser)
             report = {"id": info.video_id, "title": info.title, "author": info.author,
+                              "kind": info.kind, "images": len(info.images), "description": info.description,
                               "duration": info.duration, "engine": info.engine,
                               "formats": [{"label": f.label, "size": f.size} for f in info.formats]}
             print(json.dumps(report, ensure_ascii=False))
             if args.download:
                 path = engine.download(info, info.formats[0], args.output or Path(store.settings["download_dir"]))
-                store.add_history(info, path)
+                from clipharbor.models import SavedMedia
+                bundle = path if isinstance(path, SavedMedia) else None
+                path = Path(bundle.path) if bundle else path
+                store.add_history(info, bundle or path)
                 print("保存到：" + str(path))
                 report["file"] = str(path)
-                report["bytes"] = path.stat().st_size
+                report["bytes"] = sum(p.stat().st_size for p in bundle.files) if bundle else path.stat().st_size
             if args.report:
                 args.report.parent.mkdir(parents=True, exist_ok=True)
                 args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -65,7 +80,9 @@ def main():
             print(safe_message(error), file=sys.stderr)
             if args.report:
                 args.report.parent.mkdir(parents=True, exist_ok=True)
-                args.report.write_text(json.dumps({"error": safe_message(error)}, ensure_ascii=False), encoding="utf-8")
+                args.report.write_text(json.dumps({"error": safe_message(error), "logs": logs,
+                    "details": ["".join(safe_message(line) + "\n" for line in traceback.format_exception(x)[-8:])
+                                for x in getattr(error, "unexpected_errors", [])]}, ensure_ascii=False), encoding="utf-8")
             return 1
     from clipharbor.gui import run
     return run()

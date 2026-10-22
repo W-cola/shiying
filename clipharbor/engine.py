@@ -47,6 +47,24 @@ class Engine:
             raise AppError("请一次解析一个视频链接，下载完成后再添加下一个。")
         url = links[0]
         check_cancel(self.cancel)
+        from .platforms import SocialResolver, platform, album
+        if urlsplit(url).path.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic")):
+            return album(VideoInfo(url, url, stable_id(url), Path(urlsplit(url).path).name, platform="图片直链"), [url])
+        name = platform(url)
+        if name in ("小红书", "快手", "视频号", "B站"):
+            resolver = SocialResolver(self.data_dir, self.log, self.cancel)
+            try:
+                return resolver.resolve(url, interactive)
+            except Cancelled:
+                raise
+            except (AppError, requests.RequestException, ValueError) as error:
+                if interactive:
+                    raise
+                self.log(safe_message(error))
+                try:
+                    return self._ydl_resolve(url, url)
+                except AppError:
+                    raise AppError(f"{name}未返回可保存的完整内容，请使用浏览器辅助解析完成登录或验证。") from error
         if is_douyin(url):
             resolver = DouyinResolver(self.data_dir, self.log, self.cancel)
             if interactive:
@@ -76,7 +94,9 @@ class Engine:
         return self._ydl_resolve(url, url)
 
     def _ydl_options(self):
-        return {"quiet": True, "no_warnings": False, "logger": Logger(self.log),
+        from .media import ffmpeg
+        return {"quiet": True, "no_warnings": False, "logger": Logger(self.log), "ffmpeg_location": ffmpeg(),
+                "max_filesize": getattr(self, "limit_bytes", 0) or None,
                 "noplaylist": True, "socket_timeout": 15, "retries": 2,
                 "extractor_retries": 1, "nocheckcertificate": False}
 
@@ -101,7 +121,7 @@ class Engine:
             ext = f.get("ext") or "mp4"
             formats.append(VideoFormat(str(f.get("format_id") or "direct"), f"{label} · {ext.upper()}", f["url"], ext,
                                        height, f.get("width") or 0, f.get("filesize") or f.get("filesize_approx") or 0))
-        if shutil.which("ffmpeg"):
+        if shutil.which("ffmpeg") or self._ydl_options().get("ffmpeg_location"):
             formats.insert(0, VideoFormat("best_merged", "最佳画质 · 自动合并音视频", ext="mp4"))
         if not formats:
             raise AppError("未找到包含声音的可下载视频。若网站分开提供音视频，请安装 FFmpeg 后重试；受保护的视频不支持下载。")
@@ -112,6 +132,12 @@ class Engine:
 
     def download(self, info: VideoInfo, fmt: VideoFormat, folder: Path) -> Path:
         check_cancel(self.cancel)
+        if info.kind == "images":
+            from .media import save_album
+            return save_album(self, info, fmt, folder)
+        if fmt.mode in ("dash", "concat") or fmt.decode_key:
+            from .media import assemble
+            return assemble(self, info, fmt, folder)
         folder = folder.expanduser().resolve()
         folder.mkdir(parents=True, exist_ok=True)
         stem = safe_filename(info.title, info.video_id)
@@ -173,6 +199,9 @@ class Engine:
                 else:
                     offset = 0  # A server ignoring Range requires a clean replacement.
                     total = int(response.headers.get("Content-Length") or 0)
+                limit = getattr(self, "limit_bytes", 0)
+                if limit and total > limit:
+                    raise AppError("临时媒体超过 1 GiB 上限，请直接保存后从片段库播放。")
                 validator = response.headers.get("ETag") or response.headers.get("Last-Modified") or ""
                 metadata.write_text(json.dumps({"url": url, "validator": validator}), encoding="utf-8")
                 done, started, last_emit = offset, time.monotonic(), 0
@@ -185,6 +214,8 @@ class Engine:
                             raise AppError("收到的内容不是视频，下载已停止。")
                         output.write(chunk)
                         done += len(chunk)
+                        if limit and done > limit:
+                            raise AppError("临时媒体超过容量上限，已停止读取。")
                         now = time.monotonic()
                         if now - last_emit > .15:
                             speed = (done - offset) / max(now - started, .01)
@@ -207,6 +238,8 @@ class Engine:
 
         def hook(d):
             check_cancel(self.cancel)
+            if getattr(self, "limit_bytes", 0) and (d.get("downloaded_bytes") or 0) > self.limit_bytes:
+                raise AppError("预览媒体超过 1 GiB 上限，请直接保存。")
             if d.get("status") == "downloading":
                 self.progress({"done": d.get("downloaded_bytes") or 0,
                                "total": d.get("total_bytes") or d.get("total_bytes_estimate") or 0,
@@ -242,3 +275,11 @@ class Engine:
             check_cancel(self.cancel)
             raise AppError("下载失败。重新解析可以刷新过期的视频地址。\n" + safe_message(error)) from error
         raise AppError("下载器未返回完整的文件，请查看运行记录。")
+
+    def prepare_preview(self, info, fmt):
+        from .media import prepare_preview
+        return prepare_preview(self, info, fmt)
+
+    def extract_audio(self, info, fmt, folder, local_path=None):
+        from .media import extract_audio
+        return extract_audio(self, info, fmt, folder, local_path)

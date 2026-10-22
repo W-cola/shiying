@@ -6,6 +6,7 @@ greenlet==3.5.6
 idna==3.20
 imageio-ffmpeg==0.6.0
 iniconfig==2.3.1
+numpy==2.5.4
 packaging==26.3
 pefile==2024.8.26
 playwright==1.63.0
@@ -20,6 +21,8 @@ pytest==9.1.1
 pywin32-ctypes==0.2.3
 requests==2.34.2
 setuptools==84.0.0
+sherpa-onnx-core==1.13.8
+sherpa_onnx==1.13.8
 shiboken6==6.11.2
 typing_extensions==4.16.0
 urllib3==2.8.0

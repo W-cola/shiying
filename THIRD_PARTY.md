@@ -11,6 +11,11 @@
 | yt-dlp | 通用视频解析与下载 | https://github.com/yt-dlp/yt-dlp · Unlicense；部分依赖有各自许可 |
 | Requests | HTTP 流式下载 | https://github.com/psf/requests · Apache-2.0 |
 | PyInstaller | 应用打包 | https://github.com/pyinstaller/pyinstaller · GPL-2.0-or-later，带分发例外 |
+| sherpa-onnx 1.13.8 | CPU 离线语音识别及字词时间戳 | https://github.com/k2-fsa/sherpa-onnx · Apache-2.0 |
+| SenseVoice Small int8 2024-07-17 | 离线多语言识别模型 | https://github.com/FunAudioLLM/SenseVoice · 代码 MIT；模型权重按模型卡所列 FunASR Model License，见 licenses/sensevoice-model.txt；固定导出及摘要见 assets/speech/model.json |
+| Silero VAD | 本地讲话片段检测 | https://github.com/snakers4/silero-vad · MIT |
+| ONNX Runtime | 本地模型推理运行库 | https://github.com/microsoft/onnxruntime · MIT |
+| NumPy | 本地 PCM 音频处理 | https://numpy.org/ · BSD-3-Clause |
 
 其他传递依赖按各自元数据许可分发。未打包 Microsoft Edge 或 Google Chrome，它们由用户机器提供。FFmpeg 由 imageio-ffmpeg 提供，也可通过 IMAGEIO_FFMPEG_EXE 指定兼容程序；许可与源码构建入口随包保留。
 

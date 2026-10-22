@@ -26,6 +26,8 @@ subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", *clean_flags
                 "--version-file", str(icon_dir / "windows-version.txt"),
                 "--add-data", str(root / "clipharbor" / "browser_read.js") + ";clipharbor",
                 "--add-data", str(root / "clipharbor" / "browser_capture.js") + ";clipharbor",
+                "--add-data", str(root / "assets" / "speech") + ";assets/speech",
+                "--collect-all", "sherpa_onnx",
                 "--collect-all", "imageio_ffmpeg",
                 "--collect-all", "yt_dlp", "--exclude-module", "PySide6.QtWebEngineCore",
                 "--exclude-module", "PySide6.QtWebEngineWidgets", "--exclude-module", "pytest",

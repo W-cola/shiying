@@ -1,10 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('E:/codex/视频获取（爬虫）/clipharbor/browser_read.js', 'clipharbor'), ('E:/codex/视频获取（爬虫）/clipharbor/browser_capture.js', 'clipharbor')]
+datas = [('E:/codex/视频获取（爬虫）/clipharbor/browser_read.js', 'clipharbor'), ('E:/codex/视频获取（爬虫）/clipharbor/browser_capture.js', 'clipharbor'), ('E:/codex/视频获取（爬虫）/assets/speech', 'assets/speech')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('playwright')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('sherpa_onnx')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('imageio_ffmpeg')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]

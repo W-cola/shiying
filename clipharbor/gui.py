@@ -166,7 +166,8 @@ class Window(QMainWindow):
         sidebar.addSpacing(42)
         self.nav_download = QPushButton("↓    收下内容")
         self.nav_history = QPushButton("≡    我的片段")
-        for b in (self.nav_download, self.nav_history):
+        self.nav_speech = QPushButton("文    原声文案")
+        for b in (self.nav_download, self.nav_history, self.nav_speech):
             b.setObjectName("nav")
             b.setCheckable(True)
             sidebar.addWidget(b)
@@ -187,9 +188,16 @@ class Window(QMainWindow):
         scroll.setWidget(self.download_page())
         self.stack.addWidget(scroll)
         self.stack.addWidget(self.history_page())
+        from .speech_gui import TranscriptWorkspace
+        self.speech = TranscriptWorkspace(self.store.root)
+        self.speech.stopped.connect(lambda: self.close() if self.closing else None)
+        self.stack.addWidget(self.speech)
         self.nav_download.clicked.connect(lambda: self.switch_page(0))
         self.nav_history.clicked.connect(lambda: self.switch_page(1))
+        self.nav_speech.clicked.connect(lambda: self.switch_page(2))
         self.refresh_history()
+        from .windows import bind_window
+        bind_window(self)
 
     def switch_page(self, index):
         if index:
@@ -197,7 +205,8 @@ class Window(QMainWindow):
         self.stack.setCurrentIndex(index)
         self.nav_download.setChecked(index == 0)
         self.nav_history.setChecked(index == 1)
-        if index:
+        self.nav_speech.setChecked(index == 2)
+        if index == 1:
             self.refresh_history()
 
     def panel(self):
@@ -326,6 +335,10 @@ class Window(QMainWindow):
         self.download_button.setEnabled(False)
         self.download_button.clicked.connect(self.download)
         pb.addWidget(self.download_button)
+        self.transcribe_button = QPushButton("提取视频文案")
+        self.transcribe_button.setEnabled(False)
+        self.transcribe_button.clicked.connect(self.transcribe_video)
+        pb.addWidget(self.transcribe_button)
         self.audio_button = QPushButton("只保存原声 · M4A")
         self.audio_button.setObjectName("quiet")
         self.audio_button.setEnabled(False)
@@ -407,7 +420,7 @@ class Window(QMainWindow):
         self.history.cellDoubleClicked.connect(self.open_history)
         pb.addWidget(self.history)
         actions = QHBoxLayout()
-        for text, callback in (("播放 / 预览", self.play_record), ("打开位置", self.reveal_record)):
+        for text, callback in (("播放 / 预览", self.play_record), ("提取文案", self.transcribe_record), ("打开位置", self.reveal_record)):
             button = QPushButton(text)
             button.clicked.connect(callback)
             actions.addWidget(button)
@@ -440,6 +453,8 @@ class Window(QMainWindow):
             self.platform_badge.setText("等待解析")
             self.preview_button.setEnabled(False)
             self.audio_button.setEnabled(False)
+            self.transcribe_button.setEnabled(False)
+            self.transcribe_button.show()
             self.download_button.setText("保存视频")
             self.format_caption.setText("视频画质")
             self.audio_button.show()
@@ -461,7 +476,7 @@ class Window(QMainWindow):
         self.resolve_button.setText("解析中…" if action == "resolve" else "解析链接  →")
         self.detail.setText("正在读取分享内容…" if action == "resolve" else "正在保存到本地…")
         for widget in (self.link_input, self.resolve_button, self.browser_button, self.download_button,
-                       self.folder_button, self.formats, self.preview_button, self.audio_button, self.clear_button):
+                       self.folder_button, self.formats, self.preview_button, self.audio_button, self.transcribe_button, self.clear_button):
             widget.setEnabled(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
@@ -508,6 +523,7 @@ class Window(QMainWindow):
             self.format_caption.setText("保存范围" if result.kind == "images" else "视频画质")
             self.preview_button.setText("重新加载预览")
             self.audio_button.setVisible(result.kind != "images")
+            self.transcribe_button.setVisible(result.kind != "images")
             self.detail.setText("预览已在左侧加载，选择画质即可保存")
             self.append_log("解析成功，已匹配视频 ID " + result.video_id)
             self.inline_preview.set_info(result, result.formats[0])
@@ -562,6 +578,7 @@ class Window(QMainWindow):
         self.source_button.setEnabled(self.info is not None)
         self.preview_button.setEnabled(self.info is not None)
         self.audio_button.setEnabled(self.info is not None and self.info.kind != "images")
+        self.transcribe_button.setEnabled(self.info is not None and self.info.kind != "images")
         if self.closing:
             self.close()
 
@@ -649,6 +666,21 @@ class Window(QMainWindow):
         if self.info and self.info.kind != "images" and not self.busy():
             self.start("extract_audio", (self.info, self.info.formats[self.formats.currentIndex()], Path(self.folder_input.text()) / "原声"))
 
+    def transcribe_video(self):
+        if self.info and self.info.kind != "images" and not self.busy():
+            self.switch_page(2)
+            self.speech.start_online(self.info, self.info.formats[self.formats.currentIndex()])
+
+    def transcribe_record(self):
+        record = self.selected_record()
+        if not record:
+            return
+        if record.get("kind", "video") not in ("video", "audio"):
+            QMessageBox.information(self, "选择音视频", "图文正文在图片预览中；提取原声文案请先选择视频或音频。")
+            return
+        self.switch_page(2)
+        self.speech.start_local(Path(record["path"]), record["title"])
+
     def selected_record(self):
         row = self.history.currentRow()
         return self.history.item(row, 0).data(Qt.ItemDataRole.UserRole) if row >= 0 else None
@@ -720,7 +752,8 @@ class Window(QMainWindow):
 
     def closeEvent(self, event):
         previews_stopped = self.inline_preview.shutdown()
-        if self.worker or not previews_stopped:
+        speech_stopped = self.speech.shutdown()
+        if self.worker or not previews_stopped or not speech_stopped:
             self.closing = True
             self.cancel()
             self.status.setText("正在停止任务并关闭…")

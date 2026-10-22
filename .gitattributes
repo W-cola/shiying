@@ -1,0 +1,2 @@
+# Model digests cover exact bytes, including the vocabulary's line endings.
+assets/speech/** -text

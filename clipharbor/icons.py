@@ -12,7 +12,11 @@ ICON_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 
 def app_icon():
-    return QIcon(":/shiying/app.svg")
+    from PySide6.QtGui import QPixmap
+    icon = QIcon()
+    for size in ICON_SIZES:
+        icon.addPixmap(QPixmap.fromImage(render_icon(size)))
+    return icon
 
 
 def glyph(name, color="#335b46"):

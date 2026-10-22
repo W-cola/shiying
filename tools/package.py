@@ -1,5 +1,6 @@
 """Package only deliverable files; never include browser sessions or test data."""
 import json
+import argparse
 import shutil
 import sys
 import zipfile
@@ -7,7 +8,9 @@ from importlib.metadata import distributions
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
-output = root / "dist" / "ShiYing"
+parser = argparse.ArgumentParser()
+parser.add_argument("--app-dir", type=Path, default=root/"dist/ShiYing", help="已验证的程序目录，也可选择暂存构建")
+output = parser.parse_args().app_dir.resolve()
 assert (output / "拾影.exe").is_file(), "Build the app first"
 from qt_runtime import prepare_runtime
 prepare_runtime(output)

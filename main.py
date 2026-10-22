@@ -22,7 +22,27 @@ def main():
     parser.add_argument("--output", type=Path, help="下载目录")
     parser.add_argument("--report", type=Path, help="将命令行测试结果保存为 JSON")
     parser.add_argument("--verify-ui", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--transcribe", type=Path, help="在本机提取音视频文案，需要已安装离线识别包")
     args = parser.parse_args()
+    if args.transcribe:
+        from threading import Event
+        from clipharbor.speech import LocalSpeech, TranscriptStore, document_text
+        from clipharbor.store import Store
+        store = TranscriptStore(Store().root)
+        doc = store.create(args.transcribe.stem)
+        doc["local_path"] = str(args.transcribe.resolve())
+        store.save(doc)
+        try:
+            result = LocalSpeech(store, Event()).run(doc, local_path=args.transcribe)
+            report = {"ok": result["state"] == "done", "document": result["id"], "state": result["state"], "text": document_text(result), "duration": result["duration"], "segments": result["segments"]}
+        except Exception as error:
+            from clipharbor.engine import safe_message
+            report = {"ok": False, "error": safe_message(error)}
+        if args.report:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps(report, ensure_ascii=False))
+        return 0 if report["ok"] else 1
     if args.verify_ui:
         from PySide6.QtWidgets import QApplication
         from PySide6.QtGui import QFontDatabase, QFont
@@ -37,12 +57,14 @@ def main():
         window.resize(1120, 1040)
         window.show()
         app.processEvents()
+        from clipharbor.windows import diagnose_window
+        identity = diagnose_window(window)
         if args.report:
             args.report.parent.mkdir(parents=True, exist_ok=True)
             screenshot = args.report.with_suffix(".png")
             if not window.grab().save(str(screenshot)):
                 raise RuntimeError("Unable to render UI")
-            args.report.write_text(json.dumps({"ok": True, "title": window.windowTitle(),
+            args.report.write_text(json.dumps({"ok": True, "title": window.windowTitle(), "window_identity": identity,
                                   "screenshot": str(screenshot)}, ensure_ascii=False), encoding="utf-8")
         window.close()
         app.processEvents()
@@ -108,7 +130,7 @@ if __name__ == "__main__":
             pass
         if sys.stderr:
             traceback.print_exc()
-        if "--url" not in sys.argv and "--verify-ui" not in sys.argv:
+        if not any(flag in sys.argv for flag in ("--url", "--verify-ui", "--transcribe")):
             try:
                 from PySide6.QtWidgets import QApplication, QMessageBox
                 app = QApplication.instance() or QApplication([])

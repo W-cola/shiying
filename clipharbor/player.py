@@ -556,6 +556,8 @@ class PlayerDialog(QDialog):
         for name in ("player", "audio", "surface", "controls", "rate", "brightness_slider", "loop", "slider", "rotate", "play_button"):
             setattr(self, name, getattr(self.media, name))
         self.media.set_source(QUrl.fromLocalFile(str(Path(result.path).resolve())), autoplay=True, audio=result.kind == "audio")
+        from .windows import bind_window
+        bind_window(self)
 
     def seek(self, delta):
         self.media.seek(delta)

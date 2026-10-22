@@ -2,7 +2,36 @@
 from PySide6.QtCore import Qt, QSize, QRectF, QEvent, QPoint, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (QComboBox, QListView, QFrame, QStyledItemDelegate, QStyle,
-    QVBoxLayout, QGraphicsDropShadowEffect, QPlainTextEdit)
+    QVBoxLayout, QGraphicsDropShadowEffect, QPlainTextEdit, QWidget, QHBoxLayout, QPushButton, QButtonGroup)
+
+
+class FilterBar(QWidget):
+    currentIndexChanged = Signal(int)
+
+    def __init__(self, items, parent=None):
+        super().__init__(parent)
+        self.items = items
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        box = QHBoxLayout(self)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setSpacing(4)
+        for index, (title, value) in enumerate(items):
+            button = QPushButton(title)
+            button.setObjectName("filterChip")
+            button.setCheckable(True)
+            self.group.addButton(button, index)
+            box.addWidget(button)
+        self.group.button(0).setChecked(True)
+        self.group.idClicked.connect(self.currentIndexChanged)
+
+    def currentData(self):
+        return self.items[self.group.checkedId()][1]
+
+    def setCurrentIndex(self, index):
+        if index != self.group.checkedId():
+            self.group.button(index).setChecked(True)
+            self.currentIndexChanged.emit(index)
 
 
 class ShareInput(QPlainTextEdit):

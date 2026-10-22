@@ -32,13 +32,71 @@ def qposition(text, index):
     return len(text[:index].encode("utf-16-le"))//2
 
 
+def text_position(text, position):
+    return len(text.encode("utf-16-le")[:position*2].decode("utf-16-le", errors="ignore"))
+
+
+def point_time(doc, position):
+    """Seek using a real token timestamp, falling back to the recorded speech span."""
+    text = document_text(doc)
+    offset = text_position(text, position)
+    if position < 0 or offset >= len(text) or text[offset].isspace():
+        return None
+    for part in text_ranges(doc):
+        if part["from"] <= offset < part["to"]:
+            relative = offset-part["from"]
+            words = part.get("words", [])
+            word = next((w for w in words if w["from"] <= relative < w["to"]), None)
+            if word is None and words:
+                word = min(words, key=lambda w: min(abs(relative-w["from"]), abs(relative-(w["to"]-1))))
+            return word["start"] if word else part["start"]
+    return None
+
+
+class TranscriptEdit(QPlainTextEdit):
+    pointSelected = Signal(int)
+
+    def mousePressEvent(self, event):
+        self._press = event.position().toPoint() if event.button() == Qt.MouseButton.LeftButton and not event.modifiers() else None
+        self._dragged = False
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if getattr(self, "_press", None) is not None and (event.position().toPoint()-self._press).manhattanLength() >= QApplication.startDragDistance():
+            self._dragged = True
+        super().mouseMoveEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        self._press = None
+        super().mouseDoubleClickEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        if (not self.isReadOnly() or event.button() != Qt.MouseButton.LeftButton or
+                getattr(self, "_press", None) is None or self._dragged or self.textCursor().hasSelection()):
+            return
+        self._press = None
+        point = event.position().toPoint()
+        cursor = self.cursorForPosition(point)
+        line = cursor.block().layout().lineForTextPosition(cursor.positionInBlock())
+        if not line.isValid():
+            return
+        start = QTextCursor(cursor.block())
+        start.setPosition(cursor.block().position()+line.textStart())
+        rectangle = self.cursorRect(start)
+        if not (rectangle.top() <= point.y() < rectangle.bottom()+1 and rectangle.x() <= point.x() < rectangle.x()+line.naturalTextWidth()):
+            return  # Blank space beside/below the article is not a text target.
+        if self.cursorRect(cursor).x() > point.x():
+            cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter)
+        self.pointSelected.emit(cursor.position())
+
+
 def selection_range(doc, begin, end):
     """Use actual segment or word alignment, never distribute time by text length."""
     if begin == end:
         return None
     text = document_text(doc)
-    begin = len(text.encode("utf-16-le")[:begin*2].decode("utf-16-le", errors="ignore"))
-    end = len(text.encode("utf-16-le")[:end*2].decode("utf-16-le", errors="ignore"))
+    begin, end = text_position(text, begin), text_position(text, end)
     matches = []
     for part in text_ranges(doc):
         if part["from"] >= end or part["to"] <= begin:
@@ -85,6 +143,8 @@ class SpeechWorker(QThread):
 
 class TranscriptWorkspace(QWidget):
     stopped = Signal()
+    backRequested = Signal()
+    libraryChanged = Signal()
 
     def __init__(self, data_dir):
         super().__init__()
@@ -97,6 +157,9 @@ class TranscriptWorkspace(QWidget):
         self.closing = False
         self.stop_at = None
         self.follow = False
+        self.text_cue = False
+        self.cue_position = 0
+        self.pending_position = None
         self.player = QMediaPlayer(self)
         self.output = QAudioOutput(self)
         self.player.setAudioOutput(self.output)
@@ -105,6 +168,10 @@ class TranscriptWorkspace(QWidget):
         box.setContentsMargins(28, 28, 28, 22)
         box.setSpacing(16)
         top = QHBoxLayout()
+        self.back_button = QPushButton("← 资料库")
+        self.back_button.setObjectName("quiet")
+        self.back_button.clicked.connect(self.backRequested)
+        top.addWidget(self.back_button)
         heading = QVBoxLayout()
         heading.addWidget(caption("原声文案", "headline"))
         heading.addWidget(caption("把声音留下，也把有用的文字留下。"))
@@ -158,12 +225,13 @@ class TranscriptWorkspace(QWidget):
         pb.addLayout(row)
         self.meta = caption("支持本地音频、视频，也可以从分享视频的「提取视频文案」进入。")
         pb.addWidget(self.meta)
-        self.editor = QPlainTextEdit()
+        self.editor = TranscriptEdit()
         self.editor.setReadOnly(True)
         self.editor.setPlaceholderText("文案会以完整段落显示在这里。\n\n识别在本机完成，声音不会上传。首次使用需下载或导入约 240 MB 的离线识别包。")
         self.editor.setStyleSheet("QPlainTextEdit{border:none;background:white;font-size:18px;padding:10px 0;selection-background-color:#cce8d5;} QPlainTextEdit:focus{border:none;}")
         self.editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.editor.selectionChanged.connect(self.selection_changed)
+        self.editor.pointSelected.connect(self.select_point)
         self.editor.verticalScrollBar().actionTriggered.connect(lambda _: setattr(self, "follow", False))
         pb.addWidget(self.editor, 1)
         self.hint = caption("识别结果适合作为初稿，人名、方言、歌曲请回听校对。")
@@ -219,7 +287,7 @@ class TranscriptWorkspace(QWidget):
         self.progress_bar.hide()
         box.addWidget(self.progress_bar)
         self.player.positionChanged.connect(self.position_changed)
-        self.player.durationChanged.connect(lambda d: self.seek.setRange(0, d))
+        self.player.durationChanged.connect(self.duration_changed)
         self.player.playbackStateChanged.connect(self.play_state)
         self.player.errorOccurred.connect(lambda *args: self.status.setText("原声暂时无法播放，请检查音频缓存是否完整。"))
         self.refresh()
@@ -237,6 +305,7 @@ class TranscriptWorkspace(QWidget):
             if doc["id"] == key:
                 self.library.setCurrentItem(item)
         self.library.blockSignals(False)
+        self.libraryChanged.emit()
 
     def select_item(self, item, old=None):
         if item:
@@ -252,6 +321,8 @@ class TranscriptWorkspace(QWidget):
             self.player.stop()
             self.stop_at = None
             self.follow = False
+            self.text_cue = False
+            self.pending_position = None
             self.editing = False
             self.editor.setReadOnly(True)
         self.current = doc
@@ -271,7 +342,7 @@ class TranscriptWorkspace(QWidget):
                  "unclear": "没有检测到清晰讲话。可回听原声，或点击「仍然尝试」按音轨识别。",
                  "failed": doc.get("error", "操作未完成，可重试。"),
                  "paused": "已保留完成的文字，继续时从检查点开始。"}
-        self.hint.setText(hints.get(doc["state"], "修改会保留原稿。选中文字后，可回听对应原声。" if text else "正在准备文案，识别过程中可以暂停。"))
+        self.hint.setText(hints.get(doc["state"], "点文字定位原声，再点播放；拖选文字可回听选段。" if text else "正在准备文案，识别过程中可以暂停。"))
         self.update_controls()
 
     def update_controls(self):
@@ -295,7 +366,7 @@ class TranscriptWorkspace(QWidget):
         self.more.setEnabled(bool(doc and not active and not self.editing))
         self.play.setEnabled(bool(doc and not self.player.source().isEmpty() and not self.editing))
 
-    def start_local(self, path, title=None):
+    def start_local(self, path, title=None, origin=None, media_kind=None):
         if self.worker:
             self.status.setText("请先暂停当前任务，再导入新的文件。")
             return False
@@ -306,6 +377,9 @@ class TranscriptWorkspace(QWidget):
         self.save_edit()
         doc = self.store.create(title or path.stem)
         doc["local_path"] = str(path.resolve())
+        doc["media_kind"] = media_kind or ("video" if path.suffix.lower() in {".mp4", ".mkv", ".mov", ".webm", ".avi"} else "audio")
+        if origin:
+            doc["origin"] = origin
         self.store.save(doc)
         self.show_document(doc)
         self.refresh()
@@ -318,6 +392,8 @@ class TranscriptWorkspace(QWidget):
             return False
         self.save_edit()
         doc = self.store.create(info.title, info.source_url, info.platform)
+        doc["media_kind"] = info.kind
+        self.store.save(doc)
         self.pending_args[doc["id"]] = {"info": info, "fmt": fmt}
         self.show_document(doc)
         self.refresh()
@@ -327,7 +403,8 @@ class TranscriptWorkspace(QWidget):
     def import_media(self):
         path, _ = QFileDialog.getOpenFileName(self, "选择音频或视频", "", "音视频 (*.mp4 *.mkv *.mov *.webm *.avi *.mp3 *.m4a *.aac *.wav *.flac *.ogg *.opus *.wma);;所有文件 (*)")
         if path:
-            self.start_local(path)
+            return self.start_local(path)
+        return False
 
     def start_worker(self, worker):
         self.player.pause()
@@ -448,7 +525,10 @@ class TranscriptWorkspace(QWidget):
         old = self.current
         audio = self.store.folder(old["id"])/old.get("audio", "audio.m4a")
         if audio.is_file():
-            self.start_local(audio, old["title"]+" · 新稿")
+            from .library import content_kind
+            self.start_local(audio, old["title"]+" · 新稿",
+                origin=old.get("origin") or old.get("local_path") or old.get("source") or old["id"],
+                media_kind=content_kind(old))
         else:
             self.status.setText("原声缓存不存在，请重新导入媒体；已有文案已保留。")
 
@@ -472,8 +552,37 @@ class TranscriptWorkspace(QWidget):
         self.update_controls()
 
     def selection_changed(self):
+        if self.editor.textCursor().hasSelection():
+            self.text_cue = False
+            if not self.editing:
+                self.player.pause()
         if self.player.playbackState() != QMediaPlayer.PlaybackState.PlayingState:
-            self.play.setText("回听选中文字" if self.editor.textCursor().hasSelection() and self.current and self.current.get("edited_text") is None else "回听原声")
+            self.play.setText("回听选中文字" if self.editor.textCursor().hasSelection() and self.current and self.current.get("edited_text") is None else "从此处播放" if self.text_cue else "回听原声")
+
+    def select_point(self, position):
+        if self.editing or not self.current or self.player.source().isEmpty():
+            return
+        at = point_time(self.current, position)
+        if at is None:
+            if self.current.get("edited_text") is not None:
+                self.status.setText("修改后的文案暂不对应原声位置，可恢复原稿后点选定位。")
+            return
+        self.follow = False
+        self.stop_at = None
+        self.text_cue = True
+        milliseconds = int(at*1000)
+        self.cue_position = milliseconds
+        self.pending_position = milliseconds if not self.player.duration() else None
+        self.player.setPosition(milliseconds)
+        self.position_changed(milliseconds)
+        self.play.setText("暂停回听" if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState else "从此处播放")
+        self.status.setText("已定位到 "+human_duration(max(.001, at))+" · 播放将从这里继续")
+
+    def duration_changed(self, duration):
+        self.seek.setRange(0, duration)
+        if duration and self.pending_position is not None:
+            position, self.pending_position = self.pending_position, None
+            self.player.setPosition(position)
 
     def toggle_play(self):
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
@@ -488,16 +597,18 @@ class TranscriptWorkspace(QWidget):
             self.stop_at = end
         else:
             self.stop_at = None
-            if self.player.position() >= self.player.duration()-50:
-                self.player.setPosition(0)
+            if self.player.duration() and self.player.position() >= self.player.duration()-50:
+                self.player.setPosition(self.cue_position if self.text_cue else 0)
         self.player.play()
 
     def seek_audio(self, position):
         self.stop_at = None
+        self.text_cue = False
+        self.pending_position = None
         self.player.setPosition(position)
 
     def play_state(self, state):
-        self.play.setText("暂停回听" if state == QMediaPlayer.PlaybackState.PlayingState else "继续回听")
+        self.play.setText("暂停回听" if state == QMediaPlayer.PlaybackState.PlayingState else "从此处播放" if self.text_cue else "继续回听")
 
     def follow_audio(self):
         self.follow = True
@@ -528,11 +639,21 @@ class TranscriptWorkspace(QWidget):
                     selection.format.setForeground(QColor("#18854d")) if foreground else selection.format.setBackground(QColor("#edf6ef"))
                     selections.append(selection)
                     return cursor
-                current_cursor = mark(part["from"], part["to"])
+                current_cursor = None
                 for word in part.get("words", []):
                     if word["start"] <= position/1000 < word["end"]:
+                        a, b = word["from"], word["to"]
+                        content = part["text"].strip()
+                        stops = "。！？!?；;\n"
+                        while a > 0 and content[a-1] not in stops:
+                            a -= 1
+                        while b < len(content) and content[b-1] not in stops:
+                            b += 1
+                        mark(part["from"]+a, part["from"]+b)
                         current_cursor = mark(part["from"]+word["from"], part["from"]+word["to"], True)
                         break
+                if current_cursor is None:
+                    current_cursor = mark(part["from"], part["to"])
                 break
         self.editor.setExtraSelections(selections)
         if self.follow and current_cursor:

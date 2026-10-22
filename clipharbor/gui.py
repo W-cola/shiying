@@ -52,6 +52,9 @@ QPushButton#quiet:disabled { color: #b2beb5; }
 QPushButton#nav { color: #b2c6bb; background: transparent; border: none; text-align: left; padding: 13px 16px; }
 QPushButton#nav:checked { color: #e3f7e6; background: #274a37; }
 QPushButton#nav:hover { background: #203f31; }
+QPushButton#filterChip { border: none; background: transparent; padding: 9px 15px; color: #708378; font-weight: 400; }
+QPushButton#filterChip:hover { background: #edf3ee; color: #315e44; }
+QPushButton#filterChip:checked { background: #deeee3; color: #21633d; font-weight: 600; }
 QPlainTextEdit, QLineEdit, QComboBox { background: #fafcfb; color: #284c3a; border: 1px solid #dce7de; border-radius: 8px; padding: 10px; selection-background-color: #c4e3d0; }
 QPlainTextEdit:focus, QLineEdit:focus { border: 1px solid #55a477; }
 QComboBox { min-height: 20px; padding: 9px 42px 9px 12px; }
@@ -165,9 +168,8 @@ class Window(QMainWindow):
         sidebar.addWidget(label("让灵感，留在本地", "sideCaption"))
         sidebar.addSpacing(42)
         self.nav_download = QPushButton("↓    收下内容")
-        self.nav_history = QPushButton("≡    我的片段")
-        self.nav_speech = QPushButton("文    原声文案")
-        for b in (self.nav_download, self.nav_history, self.nav_speech):
+        self.nav_history = QPushButton("≡    资料库")
+        for b in (self.nav_download, self.nav_history):
             b.setObjectName("nav")
             b.setCheckable(True)
             sidebar.addWidget(b)
@@ -191,10 +193,11 @@ class Window(QMainWindow):
         from .speech_gui import TranscriptWorkspace
         self.speech = TranscriptWorkspace(self.store.root)
         self.speech.stopped.connect(lambda: self.close() if self.closing else None)
+        self.speech.backRequested.connect(lambda: self.switch_page(1))
+        self.speech.libraryChanged.connect(self.refresh_history)
         self.stack.addWidget(self.speech)
         self.nav_download.clicked.connect(lambda: self.switch_page(0))
         self.nav_history.clicked.connect(lambda: self.switch_page(1))
-        self.nav_speech.clicked.connect(lambda: self.switch_page(2))
         self.refresh_history()
         from .windows import bind_window
         bind_window(self)
@@ -204,8 +207,7 @@ class Window(QMainWindow):
             self.inline_preview.media.player.pause()
         self.stack.setCurrentIndex(index)
         self.nav_download.setChecked(index == 0)
-        self.nav_history.setChecked(index == 1)
-        self.nav_speech.setChecked(index == 2)
+        self.nav_history.setChecked(index in (1, 2))
         if index == 1:
             self.refresh_history()
 
@@ -393,23 +395,36 @@ class Window(QMainWindow):
         box = QVBoxLayout(page)
         box.setContentsMargins(32, 35, 32, 32)
         box.setSpacing(20)
-        box.addWidget(label("我的片段", "headline"))
-        box.addWidget(label("视频、图文和音频集中收藏。双击即可在应用内播放或预览。", "muted"))
+        heading = QHBoxLayout()
+        titles = QVBoxLayout()
+        titles.addWidget(label("资料库", "headline"))
+        titles.addWidget(label("内容和文案，放在一起。", "muted"))
+        heading.addLayout(titles, 1)
+        self.library_import = QPushButton("导入音视频提取文案")
+        self.library_import.setObjectName("primary")
+        self.library_import.clicked.connect(self.import_library_media)
+        heading.addWidget(self.library_import)
+        box.addLayout(heading)
         filters = QHBoxLayout()
-        self.history_kind = QComboBox()
-        for title, kind in (("全部", ""), ("视频", "video"), ("图文", "images"), ("音频", "audio")):
-            self.history_kind.addItem(title, kind)
+        from .widgets import FilterBar
+        self.history_kind = FilterBar([("全部", ""), ("视频", "video"), ("图文", "images"), ("音频", "audio")])
+        self.history_has_text = QPushButton("有文案")
+        self.history_has_text.setObjectName("filterChip")
+        self.history_has_text.setCheckable(True)
+        self.history_has_text.toggled.connect(self.refresh_history)
         self.history_search = QLineEdit()
-        self.history_search.setPlaceholderText("搜索标题或作者")
+        self.history_search.setPlaceholderText("搜索内容、作者或文案全文")
         self.history_search.setClearButtonEnabled(True)
         filters.addWidget(self.history_kind)
+        filters.addWidget(self.history_has_text)
         filters.addWidget(self.history_search, 1)
         box.addLayout(filters)
         self.history_kind.currentIndexChanged.connect(self.refresh_history)
         self.history_search.textChanged.connect(self.refresh_history)
         panel, pb = self.panel()
         self.history = QTableWidget(0, 4)
-        self.history.setHorizontalHeaderLabels(["内容", "来源 / 类型", "大小", "保存时间"])
+        self.history.setWordWrap(False)
+        self.history.setHorizontalHeaderLabels(["内容", "类型 / 文案", "大小", "保存时间"])
         self.history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.history.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.history.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -418,18 +433,24 @@ class Window(QMainWindow):
         for index in (1, 2, 3):
             self.history.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeMode.ResizeToContents)
         self.history.cellDoubleClicked.connect(self.open_history)
+        self.history.itemSelectionChanged.connect(self.library_selection_changed)
         pb.addWidget(self.history)
+        self.library_empty = label("还没有收藏内容。粘贴分享链接保存，或导入本地音视频提取文案。", "muted", True)
+        pb.addWidget(self.library_empty)
         actions = QHBoxLayout()
-        for text, callback in (("播放 / 预览", self.play_record), ("提取文案", self.transcribe_record), ("打开位置", self.reveal_record)):
+        self.library_buttons = []
+        for text, callback in (("播放 / 预览", self.play_record), ("阅读文案", self.read_record), ("提取文案", self.transcribe_record)):
             button = QPushButton(text)
             button.clicked.connect(callback)
             actions.addWidget(button)
+            self.library_buttons.append(button)
         actions.addStretch()
         more = QPushButton("更多  ···")
         menu = QMenu(more)
-        for title, callback in (("提取原声", self.extract_record), ("复制文件", self.copy_record),
+        self.library_record_actions = []
+        for title, callback in (("打开位置", self.reveal_record), ("提取原声", self.extract_record), ("复制文件", self.copy_record),
                                 ("重新解析", self.resolve_record), ("删除片段…", self.delete_record)):
-            menu.addAction(title, callback)
+            self.library_record_actions.append(menu.addAction(title, callback))
         more.setMenu(menu)
         actions.addWidget(more)
         pb.addLayout(actions)
@@ -627,19 +648,68 @@ class Window(QMainWindow):
             QDesktopServices.openUrl(QUrl(self.info.page_url))
 
     def refresh_history(self):
-        rows = self.store.records(self.history_kind.currentData() or "", self.history_search.text())
+        if not hasattr(self, "speech"):
+            return
+        from .library import library_entries
+        selected = self.selected_entry()
+        selected_key = selected.get("id") if selected else None
+        rows = library_entries(self.store.records(), self.speech.store.rows(), self.history_kind.currentData() or "",
+                               self.history_search.text(), self.history_has_text.isChecked())
+        self.history.blockSignals(True)
         self.history.setRowCount(len(rows))
+        self.history.clearSelection()
+        self.history.setCurrentCell(-1, -1)
         for row, item in enumerate(rows):
             kind = {"video": "视频", "images": "图文", "audio": "音频"}.get(item.get("kind", "video"), "视频")
-            for column, text in enumerate((item.get("title", "未命名"), item.get("platform", "") + " · " + kind, human_size(item.get("size", 0)), item.get("time", "").replace("T", " ")[:16])):
+            state = kind + (f" · 文案 {len(item['_doc_ids'])} 份" if item['_doc_ids'] else "")
+            for column, text in enumerate((item.get("title", "未命名"), state, human_size(item.get("size", 0)) if item.get("size") else "—", item.get("time", "").replace("T", " ")[:16])):
                 cell = QTableWidgetItem(text)
                 cell.setData(Qt.ItemDataRole.UserRole, item)
-                cell.setToolTip(item.get("title", "") + "\n" + item.get("author", "") + "\n" + item["path"])
+                cell.setToolTip(item.get("title", "") + "\n" + item.get("platform", "") + "\n" + item["path"])
                 self.history.setItem(row, column, cell)
             self.history.setRowHeight(row, 48)
+            if item.get("id") == selected_key:
+                self.history.selectRow(row)
+        self.history.blockSignals(False)
+        self.library_empty.setVisible(not rows)
+        self.library_empty.setText("没有匹配的内容。可以换个关键词，或取消筛选。" if self.history_search.text() or self.history_kind.currentData() or self.history_has_text.isChecked() else "还没有收藏内容。粘贴分享链接保存，或导入本地音视频提取文案。")
+        self.library_selection_changed()
+
+    def library_selection_changed(self):
+        if not hasattr(self, "library_buttons"):
+            return
+        item = self.selected_entry()
+        path = Path(item["path"]) if item and item.get("path") else None
+        self.library_buttons[0].setEnabled(bool(item and path and path.exists()))
+        self.library_buttons[1].setEnabled(bool(item and item.get("_doc_ids")))
+        self.library_buttons[2].setEnabled(bool(item and item.get("kind", "video") in ("video", "audio") and path and path.is_file()))
+        self.library_buttons[2].setText("提取新稿" if item and item.get("_doc_ids") else "提取文案")
+        self.library_buttons[2].setToolTip("另存一份新文案，原稿保留。" if item and item.get("_doc_ids") else "在本机提取视频或音频的文案。")
+        for action in self.library_record_actions:
+            action.setEnabled(bool(item and item.get("_record")))
+
+    def import_library_media(self):
+        if self.speech.worker:
+            self.switch_page(2)
+            self.speech.status.setText("请先暂停当前任务，再导入新的文件。")
+        elif self.speech.import_media():
+            self.switch_page(2)
+
+    def read_record(self):
+        item = self.selected_entry()
+        if item and item.get("_doc_ids"):
+            self.speech.save_edit()
+            self.speech.search.clear()
+            self.speech.show_document(self.speech.store.read(item["_doc_ids"][0]))
+            self.speech.refresh()
+            self.switch_page(2)
 
     def open_history(self, row, column):
-        self.play_record()
+        item = self.selected_entry()
+        if item and item.get("_doc_ids") and (self.history_has_text.isChecked() or not item.get("_record") or not Path(item["path"]).exists()):
+            self.read_record()
+        else:
+            self.play_record()
 
     def clear_input(self):
         if not self.busy():
@@ -672,7 +742,7 @@ class Window(QMainWindow):
             self.speech.start_online(self.info, self.info.formats[self.formats.currentIndex()])
 
     def transcribe_record(self):
-        record = self.selected_record()
+        record = self.selected_entry()
         if not record:
             return
         if record.get("kind", "video") not in ("video", "audio"):
@@ -682,8 +752,13 @@ class Window(QMainWindow):
         self.speech.start_local(Path(record["path"]), record["title"])
 
     def selected_record(self):
+        item = self.selected_entry()
+        return item.get("_record") if item else None
+
+    def selected_entry(self):
         row = self.history.currentRow()
-        return self.history.item(row, 0).data(Qt.ItemDataRole.UserRole) if row >= 0 else None
+        cell = self.history.item(row, 0) if row >= 0 else None
+        return cell.data(Qt.ItemDataRole.UserRole) if cell else None
 
     def show_viewer(self, result, title, description=""):
         from .player import GalleryDialog, PlayerDialog
@@ -693,8 +768,15 @@ class Window(QMainWindow):
         dialog.show()
 
     def play_record(self):
-        record = self.selected_record()
+        record = self.selected_entry()
         if not record:
+            return
+        if not record.get("_record"):
+            path = Path(record["path"]) if record.get("path") else None
+            if path and path.is_file():
+                self.show_viewer(SavedMedia(path, [path], record["kind"]), record["title"])
+            elif record.get("_doc_ids"):
+                self.read_record()
             return
         files = [Path(x) for x in record.get("files") or [record["path"]]]
         if not files or any(not path.is_file() for path in files):

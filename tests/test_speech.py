@@ -150,9 +150,9 @@ def test_workspace_edit_copy_recovery_and_play_boundary(qt, tmp_path, monkeypatc
 
 def test_desktop_has_video_saved_media_and_local_import_entries(qt, tmp_path, monkeypatch):
     window = Window(Store(tmp_path/"data"))
-    window.nav_speech.click()
-    assert window.stack.currentWidget() is window.speech
-    assert window.speech.import_button.isEnabled()
+    window.nav_history.click()
+    assert window.stack.currentIndex() == 1
+    assert window.library_import.isEnabled()
     called = []
     monkeypatch.setattr(window.speech, "start_online", lambda info, fmt: called.append(info.title))
     info = VideoInfo("https://example.org/v", "https://example.org/v", "id", "视频文案", formats=[VideoFormat("main", "原画")])

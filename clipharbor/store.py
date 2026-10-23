@@ -43,6 +43,8 @@ class Store:
                         "kind": result.kind, "files": [str(p) for p in files],
                         "path": str(Path(result.path).resolve()), "size": sum(p.stat().st_size for p in files),
                         "time": datetime.now().astimezone().isoformat(timespec="seconds")})
+        if info.raw.get("library_origin_path"):
+            rows[0]["origin_path"] = info.raw["library_origin_path"]
         self.write("history.json", rows)
 
     def records(self, kind="", search=""):

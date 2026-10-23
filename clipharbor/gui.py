@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Event
 
-from PySide6.QtCore import Qt, QThread, Signal, QUrl, QMimeData, QTimer
+from PySide6.QtCore import Qt, QThread, Signal, QUrl, QMimeData, QTimer, QPoint
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
@@ -55,6 +55,11 @@ QPushButton#nav:hover { background: #203f31; }
 QPushButton#filterChip { border: none; background: transparent; padding: 9px 15px; color: #708378; font-weight: 400; }
 QPushButton#filterChip:hover { background: #edf3ee; color: #315e44; }
 QPushButton#filterChip:checked { background: #deeee3; color: #21633d; font-weight: 600; }
+QWidget#libraryForms { background: transparent; }
+QPushButton#formChip { background: #edf5ef; color: #286044; border: none; padding: 7px 10px; font-size: 12px; font-weight: 500; }
+QPushButton#formChip:hover { background: #d5eadc; color: #174a30; }
+QPushButton#rowMore { background: transparent; border: none; padding: 5px; color: #708378; }
+QPushButton#rowMore:hover { background: #e4eee7; color: #24573c; }
 QPlainTextEdit, QLineEdit, QComboBox { background: #fafcfb; color: #284c3a; border: 1px solid #dce7de; border-radius: 8px; padding: 10px; selection-background-color: #c4e3d0; }
 QPlainTextEdit:focus, QLineEdit:focus { border: 1px solid #55a477; }
 QComboBox { min-height: 20px; padding: 9px 42px 9px 12px; }
@@ -424,7 +429,10 @@ class Window(QMainWindow):
         panel, pb = self.panel()
         self.history = QTableWidget(0, 4)
         self.history.setWordWrap(False)
-        self.history.setHorizontalHeaderLabels(["内容", "类型 / 文案", "大小", "保存时间"])
+        self.history.setHorizontalHeaderLabels(["内容", "打开方式", "保存时间", ""])
+        from .widgets import LibraryTitleDelegate
+        self.library_title_delegate = LibraryTitleDelegate(self.history)
+        self.history.setItemDelegateForColumn(0, self.library_title_delegate)
         self.history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.history.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.history.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -434,26 +442,13 @@ class Window(QMainWindow):
             self.history.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeMode.ResizeToContents)
         self.history.cellDoubleClicked.connect(self.open_history)
         self.history.itemSelectionChanged.connect(self.library_selection_changed)
+        self.history.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.history.customContextMenuRequested.connect(self.library_context_menu)
         pb.addWidget(self.history)
         self.library_empty = label("还没有收藏内容。粘贴分享链接保存，或导入本地音视频提取文案。", "muted", True)
         pb.addWidget(self.library_empty)
-        actions = QHBoxLayout()
-        self.library_buttons = []
-        for text, callback in (("播放 / 预览", self.play_record), ("阅读文案", self.read_record), ("提取文案", self.transcribe_record)):
-            button = QPushButton(text)
-            button.clicked.connect(callback)
-            actions.addWidget(button)
-            self.library_buttons.append(button)
-        actions.addStretch()
-        more = QPushButton("更多  ···")
-        menu = QMenu(more)
-        self.library_record_actions = []
-        for title, callback in (("打开位置", self.reveal_record), ("提取原声", self.extract_record), ("复制文件", self.copy_record),
-                                ("重新解析", self.resolve_record), ("删除片段…", self.delete_record)):
-            self.library_record_actions.append(menu.addAction(title, callback))
-        more.setMenu(menu)
-        actions.addWidget(more)
-        pb.addLayout(actions)
+        self.library_summary = label("点打开方式直接进入；双击打开主媒体，右键更多操作。", "muted")
+        pb.addWidget(self.library_summary)
         box.addWidget(panel, 1)
         return page
 
@@ -650,24 +645,41 @@ class Window(QMainWindow):
     def refresh_history(self):
         if not hasattr(self, "speech"):
             return
-        from .library import library_entries
+        from .library import library_entries, available_forms
         selected = self.selected_entry()
         selected_key = selected.get("id") if selected else None
-        rows = library_entries(self.store.records(), self.speech.store.rows(), self.history_kind.currentData() or "",
+        documents = self.speech.store.rows()
+        self.library_documents = {doc["id"]: doc for doc in documents}
+        rows = library_entries(self.store.records(), documents, "",
                                self.history_search.text(), self.history_has_text.isChecked())
+        kind_filter = self.history_kind.currentData()
+        for item in rows:
+            item["_forms"] = available_forms(item, self.library_documents, self.speech.store.root)
+        rows = [item for item in rows if not kind_filter or kind_filter in item["_kinds"] or item["_forms"].get(kind_filter)]
+        self.library_form_buttons = {}
         self.history.blockSignals(True)
         self.history.setRowCount(len(rows))
         self.history.clearSelection()
         self.history.setCurrentCell(-1, -1)
         for row, item in enumerate(rows):
-            kind = {"video": "视频", "images": "图文", "audio": "音频"}.get(item.get("kind", "video"), "视频")
-            state = kind + (f" · 文案 {len(item['_doc_ids'])} 份" if item['_doc_ids'] else "")
-            for column, text in enumerate((item.get("title", "未命名"), state, human_size(item.get("size", 0)) if item.get("size") else "—", item.get("time", "").replace("T", " ")[:16])):
+            meta = " · ".join(filter(None, (item.get("platform", ""), human_size(item["size"]) if item.get("size") else "本地内容")))
+            if not item["_forms"].get(item.get("kind", "video")):
+                meta += " · 原始文件不可用"
+            for column, text in enumerate((item.get("title", "未命名"), "", item.get("time", "").replace("T", " ")[:16], "")):
                 cell = QTableWidgetItem(text)
                 cell.setData(Qt.ItemDataRole.UserRole, item)
+                if column == 0:
+                    cell.setData(Qt.ItemDataRole.UserRole+1, meta)
                 cell.setToolTip(item.get("title", "") + "\n" + item.get("platform", "") + "\n" + item["path"])
                 self.history.setItem(row, column, cell)
-            self.history.setRowHeight(row, 48)
+            self.history.setCellWidget(row, 1, self.form_controls(item))
+            more = QPushButton("···")
+            more.setObjectName("rowMore")
+            more.setAccessibleName("此内容的更多操作")
+            more.setFixedWidth(34)
+            more.clicked.connect(lambda checked=False, entry=item, anchor=more: self.show_library_menu(entry, anchor.mapToGlobal(QPoint(0, anchor.height()))))
+            self.history.setCellWidget(row, 3, more)
+            self.history.setRowHeight(row, 74)
             if item.get("id") == selected_key:
                 self.history.selectRow(row)
         self.history.blockSignals(False)
@@ -676,17 +688,136 @@ class Window(QMainWindow):
         self.library_selection_changed()
 
     def library_selection_changed(self):
-        if not hasattr(self, "library_buttons"):
+        if not hasattr(self, "library_summary"):
             return
-        item = self.selected_entry()
-        path = Path(item["path"]) if item and item.get("path") else None
-        self.library_buttons[0].setEnabled(bool(item and path and path.exists()))
-        self.library_buttons[1].setEnabled(bool(item and item.get("_doc_ids")))
-        self.library_buttons[2].setEnabled(bool(item and item.get("kind", "video") in ("video", "audio") and path and path.is_file()))
-        self.library_buttons[2].setText("提取新稿" if item and item.get("_doc_ids") else "提取文案")
-        self.library_buttons[2].setToolTip("另存一份新文案，原稿保留。" if item and item.get("_doc_ids") else "在本机提取视频或音频的文案。")
-        for action in self.library_record_actions:
-            action.setEnabled(bool(item and item.get("_record")))
+        self.library_summary.setText(f"{self.history.rowCount()} 条内容 · 点打开方式直接进入，右键更多操作。")
+
+    def activate_library_entry(self, entry):
+        for row in range(self.history.rowCount()):
+            if self.history.item(row, 0).data(Qt.ItemDataRole.UserRole).get("id") == entry["id"]:
+                self.history.selectRow(row)
+                break
+
+    def form_controls(self, entry):
+        controls = QWidget()
+        controls.setObjectName("libraryForms")
+        box = QHBoxLayout(controls)
+        box.setContentsMargins(6, 6, 6, 6)
+        box.setSpacing(5)
+        for kind, title in (("video", "看视频"), ("images", "看图文"), ("audio", "听原声"), ("text", "读文案")):
+            assets = entry["_forms"][kind]
+            if not assets:
+                continue
+            button = QPushButton(title+(f" · {len(assets)}" if len(assets) > 1 else ""))
+            button.setObjectName("formChip")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setAccessibleName(title+"："+entry["title"])
+            button.setToolTip("选择要打开的版本" if len(assets) > 1 else title)
+            button.clicked.connect(lambda checked=False, item=entry, form=kind, anchor=button: self.open_form(item, form, anchor=anchor))
+            box.addWidget(button)
+            self.library_form_buttons[(entry["id"], kind)] = button
+        if not any(entry["_forms"].values()):
+            box.addWidget(label("本地文件不可用", "muted"))
+        box.addStretch()
+        controls.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        controls.customContextMenuRequested.connect(lambda pos: self.show_library_menu(entry, controls.mapToGlobal(pos)))
+        return controls
+
+    def asset_label(self, kind, asset, index=0):
+        if kind == "text":
+            stamp = datetime.fromtimestamp(asset.get("created", 0)).strftime("%m-%d %H:%M")
+            return ("最新文案" if index == 0 else "文案")+" · "+stamp+" · "+asset["label"][:50]
+        return asset["label"][:72]
+
+    def add_form_menu(self, menu, entry, kind, title):
+        assets = entry["_forms"][kind]
+        if len(assets) == 1:
+            menu.addAction(title, lambda: self.open_form(entry, kind, assets[0]))
+        elif assets:
+            versions = menu.addMenu(title+f"（{len(assets)} 份）")
+            for index, asset in enumerate(assets):
+                versions.addAction(self.asset_label(kind, asset, index), lambda checked=False, selected=asset: self.open_form(entry, kind, selected))
+
+    def build_library_menu(self, entry):
+        menu = QMenu(self.history)
+        menu.addSection("打开这条内容")
+        if entry.get("kind") == "video" and not entry["_forms"]["video"]:
+            menu.addAction("原视频文件不可用").setEnabled(False)
+        for kind, title in (("video", "看视频"), ("images", "看图文"), ("audio", "听原声"), ("text", "读文案")):
+            self.add_form_menu(menu, entry, kind, title)
+        if not any(entry["_forms"].values()):
+            menu.addAction("本地文件不可用").setEnabled(False)
+        menu.addSeparator()
+        if entry["_forms"]["video"] or entry["_forms"]["audio"]:
+            action = menu.addAction("提取新稿，保留原文案" if entry["_doc_ids"] else "提取文案", lambda: self.transcribe_entry(entry))
+            action.setEnabled(self.speech.worker is None)
+        if entry["_forms"]["video"]:
+            action = menu.addAction("提取并保存原声", lambda: self.extract_entry_audio(entry))
+            action.setEnabled(not self.busy())
+        records = entry.get("_records", [])
+        if records:
+            menu.addSeparator()
+            if entry.get("url"):
+                menu.addAction("重新解析原链接", lambda: self.resolve_record(entry["_record"]))
+            if len(records) == 1:
+                menu.addAction("打开文件位置", lambda: self.reveal_record(records[0]))
+                menu.addAction("复制文件", lambda: self.copy_record(records[0]))
+                menu.addAction("删除这一份文件…", lambda: self.delete_record(records[0]))
+            else:
+                for title, callback in (("打开文件位置", self.reveal_record), ("复制文件", self.copy_record), ("删除某一份文件…", self.delete_record)):
+                    versions = menu.addMenu(title)
+                    for record in records:
+                        versions.addAction(Path(record["path"]).name[:72], lambda checked=False, selected=record, action=callback: action(selected))
+        return menu
+
+    def show_library_menu(self, entry, global_position):
+        self.activate_library_entry(entry)
+        self.library_menu = self.build_library_menu(entry)
+        self.library_menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.library_menu.popup(global_position)
+
+    def library_context_menu(self, position):
+        row = self.history.indexAt(position).row()
+        if row >= 0:
+            entry = self.history.item(row, 0).data(Qt.ItemDataRole.UserRole)
+            self.show_library_menu(entry, self.history.viewport().mapToGlobal(position))
+
+    def open_form(self, entry, kind, asset=None, anchor=None):
+        self.activate_library_entry(entry)
+        assets = entry["_forms"].get(kind, [])
+        if not assets:
+            return
+        if asset is None and len(assets) > 1:
+            self.library_menu = QMenu(self.history)
+            self.library_menu.addSection({"video": "选择视频", "images": "选择图文", "audio": "选择原声", "text": "选择文案"}[kind])
+            for index, candidate in enumerate(assets):
+                self.library_menu.addAction(self.asset_label(kind, candidate, index), lambda checked=False, selected=candidate: self.open_form(entry, kind, selected))
+            self.library_menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            self.library_menu.popup(anchor.mapToGlobal(QPoint(0, anchor.height())) if anchor else self.history.mapToGlobal(QPoint(40, 80)))
+            return
+        asset = asset or assets[0]
+        self.inline_preview.media.player.pause()
+        self.speech.player.pause()
+        for viewer in list(self.viewers):
+            viewer.close()
+        if kind == "text":
+            try:
+                doc = self.speech.store.read(asset["document_id"])
+            except AppError as error:
+                QMessageBox.information(self, "文案暂不可用", str(error))
+                return
+            self.speech.save_edit()
+            self.speech.search.clear()
+            self.speech.show_document(doc)
+            self.speech.refresh()
+            self.switch_page(2)
+            return
+        files = [Path(p) for p in asset["files"]]
+        if any(not p.is_file() for p in files):
+            QMessageBox.information(self, "文件不可用", "这份文件已移动或删除，其他形式仍会保留。")
+            self.refresh_history()
+            return
+        self.show_viewer(SavedMedia(Path(asset["path"]), files, kind), entry["title"]+(" · 原声" if kind == "audio" else ""), entry.get("description", ""))
 
     def import_library_media(self):
         if self.speech.worker:
@@ -697,19 +828,11 @@ class Window(QMainWindow):
 
     def read_record(self):
         item = self.selected_entry()
-        if item and item.get("_doc_ids"):
-            self.speech.save_edit()
-            self.speech.search.clear()
-            self.speech.show_document(self.speech.store.read(item["_doc_ids"][0]))
-            self.speech.refresh()
-            self.switch_page(2)
+        if item:
+            self.open_form(item, "text")
 
     def open_history(self, row, column):
-        item = self.selected_entry()
-        if item and item.get("_doc_ids") and (self.history_has_text.isChecked() or not item.get("_record") or not Path(item["path"]).exists()):
-            self.read_record()
-        else:
-            self.play_record()
+        self.play_record()
 
     def clear_input(self):
         if not self.busy():
@@ -742,14 +865,19 @@ class Window(QMainWindow):
             self.speech.start_online(self.info, self.info.formats[self.formats.currentIndex()])
 
     def transcribe_record(self):
-        record = self.selected_entry()
-        if not record:
-            return
-        if record.get("kind", "video") not in ("video", "audio"):
-            QMessageBox.information(self, "选择音视频", "图文正文在图片预览中；提取原声文案请先选择视频或音频。")
+        entry = self.selected_entry()
+        if entry:
+            self.transcribe_entry(entry)
+
+    def transcribe_entry(self, entry):
+        self.activate_library_entry(entry)
+        assets = entry["_forms"]["video"] or entry["_forms"]["audio"]
+        if not assets:
+            QMessageBox.information(self, "选择音视频", "请先选择可用的视频或原声，再提取文案。")
             return
         self.switch_page(2)
-        self.speech.start_local(Path(record["path"]), record["title"])
+        self.speech.start_local(Path(assets[0]["path"]), entry["title"],
+            origin=entry.get("url") or entry.get("path"), media_kind=entry.get("kind", "audio"))
 
     def selected_record(self):
         item = self.selected_entry()
@@ -768,62 +896,59 @@ class Window(QMainWindow):
         dialog.show()
 
     def play_record(self):
-        record = self.selected_entry()
-        if not record:
+        entry = self.selected_entry()
+        if not entry:
             return
-        if not record.get("_record"):
-            path = Path(record["path"]) if record.get("path") else None
-            if path and path.is_file():
-                self.show_viewer(SavedMedia(path, [path], record["kind"]), record["title"])
-            elif record.get("_doc_ids"):
-                self.read_record()
-            return
-        files = [Path(x) for x in record.get("files") or [record["path"]]]
-        if not files or any(not path.is_file() for path in files):
-            QMessageBox.information(self, "文件不可用", "文件已移动或删除，可选择「重新解析」再次保存。")
-            return
-        self.show_viewer(SavedMedia(Path(record["path"]), files, record.get("kind", "video")), record["title"], record.get("description", ""))
+        for kind in dict.fromkeys((entry.get("kind", "video"), "video", "images", "text", "audio")):
+            if entry["_forms"].get(kind):
+                self.open_form(entry, kind, entry["_forms"][kind][0])
+                return
+        QMessageBox.information(self, "文件不可用", "本地文件已移动或删除，可重新解析原链接；已有文案仍会保留。")
 
     def extract_record(self):
-        record = self.selected_record()
-        if not record or self.busy():
-            return
-        if record.get("kind", "video") != "video":
-            QMessageBox.information(self, "选择视频", "请先选择一条已保存的视频，再提取原声。")
-            return
-        info = VideoInfo(record.get("url", ""), record.get("url", ""), Path(record["path"]).stem[-30:], record["title"],
-                         record.get("author", ""), platform=record.get("platform", ""))
-        self.start("extract_audio", (info, None, Path(self.folder_input.text()) / "原声", Path(record["path"])))
+        entry = self.selected_entry()
+        if entry:
+            self.extract_entry_audio(entry)
 
-    def copy_record(self):
-        record = self.selected_record()
+    def extract_entry_audio(self, entry):
+        if self.busy() or not entry["_forms"]["video"]:
+            return
+        asset = entry["_forms"]["video"][0]
+        record = asset.get("record") or entry
+        info = VideoInfo(record.get("url", ""), record.get("url", ""), Path(asset["path"]).stem[-30:], entry["title"],
+                         record.get("author", ""), platform=record.get("platform", ""))
+        info.raw["library_origin_path"] = asset["path"]
+        self.start("extract_audio", (info, None, Path(self.folder_input.text()) / "原声", Path(asset["path"])))
+
+    def copy_record(self, record=None):
+        record = record if isinstance(record, dict) else self.selected_record()
         if record:
             mime = QMimeData()
             mime.setUrls([QUrl.fromLocalFile(x) for x in record.get("files") or [record["path"]] if Path(x).is_file()])
             QApplication.clipboard().setMimeData(mime)
             QMessageBox.information(self, "文件已复制", "可以粘贴到文件夹或支持接收文件的聊天窗口中。")
 
-    def reveal_record(self):
-        record = self.selected_record()
+    def reveal_record(self, record=None):
+        record = record if isinstance(record, dict) else self.selected_record()
         if record:
             path = Path(record["path"])
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(path if path.is_dir() else path.parent)))
 
-    def resolve_record(self):
-        record = self.selected_record()
+    def resolve_record(self, record=None):
+        record = record if isinstance(record, dict) else self.selected_record()
         if record and not self.busy():
             self.link_input.setPlainText(record.get("url", ""))
             self.switch_page(0)
             self.resolve(False)
 
-    def delete_record(self):
-        record = self.selected_record()
+    def delete_record(self, record=None):
+        record = record if isinstance(record, dict) else self.selected_record()
         if not record or self.busy():
             return
         if self.viewers:
             QMessageBox.information(self, "请先关闭预览", "关闭播放器或图文预览后，再删除本地文件。")
             return
-        answer = QMessageBox.question(self, "删除这条片段？", "将删除这条记录及本次保存的实际文件。图文会整组删除，包括正文。\n其他批次的文件会保留。",
+        answer = QMessageBox.question(self, "删除这一份文件？", "将删除这一份文件及对应保存记录。图文会整组删除，包括正文。\n同一内容的其他文件与文案会保留。",
                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Cancel)
         if answer == QMessageBox.StandardButton.Yes:
             try:

@@ -155,11 +155,11 @@ def test_unified_library_filters_fulltext_and_reader_back(qt, tmp_path):
     window.history_search.setText("世界")
     assert window.history.rowCount() == 1
     window.history.selectRow(0)
-    assert window.library_buttons[1].isEnabled()
-    window.library_buttons[1].click()
+    entry = window.selected_entry()
+    window.library_form_buttons[(entry["id"], "text")].click()
     assert window.stack.currentWidget() is window.speech and window.nav_history.isChecked()
     window.speech.back_button.click()
     assert window.stack.currentIndex() == 1 and window.history_search.text() == "世界"
     window.history_kind.group.button(2).click()
-    assert window.history.rowCount() == 0 and not window.library_buttons[1].isEnabled()
+    assert window.history.rowCount() == 0 and not window.library_form_buttons
     window.close()

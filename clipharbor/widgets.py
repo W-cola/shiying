@@ -1,8 +1,36 @@
 """Shared desktop pickers: consistent popup rows, selection and keyboard support."""
 from PySide6.QtCore import Qt, QSize, QRectF, QEvent, QPoint, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtGui import QColor, QPainter, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import (QComboBox, QListView, QFrame, QStyledItemDelegate, QStyle,
     QVBoxLayout, QGraphicsDropShadowEffect, QPlainTextEdit, QWidget, QHBoxLayout, QPushButton, QButtonGroup)
+
+
+class LibraryTitleDelegate(QStyledItemDelegate):
+    """One elided title and one quieter metadata line, regardless of pasted newlines."""
+    def paint(self, painter, option, index):
+        painter.save()
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        painter.fillRect(option.rect, QColor("#e0f1e6" if selected else "#ffffff"))
+        title_font = QFont(option.font)
+        title_font.setWeight(QFont.Weight.DemiBold)
+        meta_font = QFont(option.font)
+        if meta_font.pixelSize() > 0:
+            meta_font.setPixelSize(max(11, meta_font.pixelSize()-1))
+        else:
+            meta_font.setPointSizeF(max(8, meta_font.pointSizeF()-1))
+        first, second = QFontMetrics(title_font), QFontMetrics(meta_font)
+        rect = option.rect.adjusted(12, 0, -12, 0)
+        top = rect.top()+(rect.height()-first.height()-second.height()-5)//2
+        painter.setFont(title_font)
+        painter.setPen(QColor("#244f39"))
+        title = " ".join(str(index.data() or "").split())
+        painter.drawText(QRectF(rect.left(), top, rect.width(), first.height()), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                         first.elidedText(title, Qt.TextElideMode.ElideRight, rect.width()))
+        painter.setFont(meta_font)
+        painter.setPen(QColor("#789080"))
+        painter.drawText(QRectF(rect.left(), top+first.height()+5, rect.width(), second.height()), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                         second.elidedText(str(index.data(Qt.ItemDataRole.UserRole+1) or ""), Qt.TextElideMode.ElideRight, rect.width()))
+        painter.restore()
 
 
 class FilterBar(QWidget):

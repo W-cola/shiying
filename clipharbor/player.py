@@ -260,11 +260,15 @@ class PlayerWidget(QWidget):
         self.volume_slider.setValue(65)
         self.brightness_slider = QSlider(Qt.Orientation.Horizontal)
         self.brightness_slider.setRange(-70, 70)
+        self.visual_settings = []
         for title, slider in (("音量", self.volume_slider), ("亮度", self.brightness_slider)):
             line = QHBoxLayout()
-            line.addWidget(QLabel(title))
+            caption = QLabel(title)
+            line.addWidget(caption)
             line.addWidget(slider, 1)
             settings.addLayout(line)
+            if title == "亮度":
+                self.visual_settings.extend((caption, slider))
         self.loop = QCheckBox("循环播放")
         settings.addWidget(self.loop)
         self.rotate = QPushButton("旋转画面")
@@ -311,6 +315,9 @@ class PlayerWidget(QWidget):
         self.preloading = not autoplay and not audio
         self.surface.placeholder = "正在连接预览…"
         self.surface.setProperty("audio", audio)
+        self.player.setVideoSink(None if audio else self.sink)
+        for widget in [self.fullscreen, self.rotate, *self.visual_settings]:
+            widget.setVisible(not audio)
         self.controls.show()
         self.position_label.setText("0:00 / " + time_text(duration*1000))
         self.audio.setMuted(self.preloading)
@@ -452,7 +459,7 @@ class PlayerWidget(QWidget):
         return bool(self.fullscreen_window or (self.fullscreen_owner and self.fullscreen_owner.isFullScreen()))
 
     def toggle_fullscreen(self):
-        if not self.has_source:
+        if not self.has_source or self.surface.property("audio"):
             return
         self.settings_panel.hide()
         if self.is_fullscreen():
@@ -501,10 +508,13 @@ class PlayerWidget(QWidget):
             return
         self.controls.show()
         self.controls.raise_()
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState and not self.preloading:
+        if not self.surface.property("audio") and self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState and not self.preloading:
             self.hide_timer.start(2400)
 
     def hide_controls(self):
+        if self.surface.property("audio"):
+            self.controls.show()
+            return
         if not self.settings_panel.isVisible() and not self.slider.isSliderDown():
             if self.controls.underMouse():
                 self.hide_timer.start(800)
@@ -548,7 +558,7 @@ class PlayerDialog(QDialog):
         self.result = result
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle(title + " · 拾影播放器")
-        self.resize(960, 700)
+        self.resize(740, 310) if result.kind == "audio" else self.resize(960, 700)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.media = PlayerWidget(self, fullscreen_owner=self)
